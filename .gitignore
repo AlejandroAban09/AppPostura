@@ -1,0 +1,86 @@
+# --------------------
+# Generales / IDE
+# --------------------
+.DS_Store
+*.log
+*.swp
+*.iml
+*.ipr
+*.iws
+.idea/
+.atom/
+.history
+.svn/
+.vscode/
+.build/
+.buildlog/
+.swiftpm/
+migrate_working_dir/
+
+# --------------------
+# Dart / Flutter / Pub
+# --------------------
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+
+# Salidas de compilación (todas las plataformas)
+build/
+
+# --------------------
+# Android
+# --------------------
+android/.gradle/
+android/.cxx/
+android/local.properties
+/android/app/debug
+/android/app/profile
+/android/app/release
+# Keystores (¡no los subas!)
+/android/app/*.keystore
+/android/app/*.jks
+
+# --------------------
+# iOS / macOS
+# (no subas Pods ni carpetas efímeras)
+ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/ephemeral/
+/ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+
+macos/Flutter/ephemeral/
+macos/Pods/
+macos/.symlinks/
+
+# --------------------
+# Linux / Windows
+# --------------------
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# --------------------
+# Web (build ya está ignorado)
+# --------------------
+
+# --------------------
+# Simbólico / simbolicacion / ofuscación
+# --------------------
+app.*.symbols
+app.*.map.json
+
+# --------------------
+# Archivos sensibles (ajústalo a tu proyecto)
+# --------------------
+.env
+*.pem
+*.p12
