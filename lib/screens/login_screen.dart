@@ -32,74 +32,37 @@ class _LoginScreenState extends State<LoginScreen> {
       final username = _userCtrl.text.trim();
       final password = _passCtrl.text;
       final box = Hive.box('focusme_users');
+      final api = locator<ApiService>();
 
-      // Primero intentar autenticación local (Hive)
-      if (box.containsKey(username)) {
-        final userData = box.get(username) as Map<dynamic, dynamic>?;
-        if (userData != null && userData['password'] == password) {
-          // Usuario local encontrado y contraseña correcta
-          // Usar el ID de la API si está disponible, sino generar uno local
-          final userId =
-              userData['api_user_id'] as int? ?? username.hashCode.abs();
+      // 🔹 1) Siempre intentar primero con la API REAL (Render)
+      final res = await api.authSimpleGet(username, password);
 
-          // Actualizar el usuario actual
-          await box.put('current_user', username);
+      // 🔹 2) Guardar/actualizar en Hive con el id de la API
+      await box.put(username, {
+        'password': password,
+        'points': 0,
+        'focus_time': 0,
+        'pomodoro_sessions': 0,
+        'sound_enabled': true,
+        'api_user_id': res.userId,
+      });
+      await box.put('current_user', username);
 
-          // Guardar sesión global
-          locator<SessionState>().signIn(id: userId, name: username);
+      // 🔹 3) Guardar sesión global con el id REAL de la API
+      locator<SessionState>().signIn(
+        id: res.userId,
+        name: res.displayName,
+      );
 
-          if (!context.mounted) return;
-          context.go('/dashboard');
-          return;
-        } else {
-          // Contraseña incorrecta para usuario local
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Contraseña incorrecta'),
-              backgroundColor: AppColors.errorColor,
-            ),
-          );
-          return;
-        }
-      }
-
-      // Si no se encuentra en Hive, intentar con la API
-      try {
-        final api = locator<ApiService>();
-        final res = await api.authSimpleGet(username, password);
-
-        // Guardar también en Hive para futuras referencias
-        await box.put(username, {
-          'password': password,
-          'points': 0,
-          'focus_time': 0,
-          'pomodoro_sessions': 0,
-          'sound_enabled': true,
-          'api_user_id': res.userId, // Guardar el ID de la API
-        });
-        await box.put('current_user', username);
-
-        // Guardar sesión global (dispara refreshListenable del router)
-        locator<SessionState>().signIn(id: res.userId, name: res.displayName);
-
-        if (!context.mounted) return;
-        context.go('/dashboard');
-      } catch (apiError) {
-        // Error de API - credenciales inválidas
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Usuario o contraseña incorrectos'),
-            backgroundColor: AppColors.errorColor,
-          ),
-        );
-      }
+      if (!context.mounted) return;
+      context.go('/dashboard');
     } catch (e) {
+      // Si quieres, aquí podríamos poner un modo offline usando Hive,
+      // pero SIN inventar ids. Por ahora, lo dejamos solo online:
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al iniciar sesión: ${e.toString()}'),
+          content: const Text('Usuario o contraseña incorrectos'),
           backgroundColor: AppColors.errorColor,
         ),
       );

@@ -1,29 +1,28 @@
-// import 'dart:async';
+// lib/controllers/device_status_controller.dart
 import 'package:flutter/foundation.dart';
 
-/// Controlador único para el collar (BLE).
-/// Mantiene ángulos, calibración, umbral y cuenta alertas.
 class DeviceStatusController extends ChangeNotifier {
-  // Conexión / identificación
+  // Estado de conexión
   bool _connected = false;
   String? _deviceId;
   String? _deviceMac;
 
-  // Postura
-  double? _baseNeckAngle;          // referencia calibrada
-  double _neckAngle = 0;           // último ángulo recibido
-  double _thresholdDeg = 20;       // umbral en grados (sensibilidad)
+  // Ángulos
+  double _neckAngle = 0.0;        // último ángulo recibido (en grados)
+  double? _baseNeckAngle;         // referencia "aquí estoy bien"
+  double _thresholdDeg = 15.0;    // umbral de mala postura en grados
 
-  // Alertas (conteo durante la sesión)
+  // Alertas y detección de mala postura
   int _alertCount = 0;
-
-  // Anti-ruido / debouncing
-  bool _isCurrentlyOut = false;          // estado actual (según umbral)
-  DateTime? _outStart;                   // cuándo empezó a estar fuera
+  bool _isCurrentlyOut = false;
+  DateTime? _outStart;
   bool _alertFiredForThisExcursion = false;
-  final int _minBadSecondsToAlert = 2;   // segundos sostenidos para contar alerta
+  final int _minBadSecondsToAlert;
 
-  // Getters
+  DeviceStatusController({int minBadSecondsToAlert = 3})
+      : _minBadSecondsToAlert = minBadSecondsToAlert;
+
+  // Getters para la UI
   bool get connected => _connected;
   String? get deviceId => _deviceId;
   String? get deviceMac => _deviceMac;
@@ -33,40 +32,43 @@ class DeviceStatusController extends ChangeNotifier {
   double get thresholdDeg => _thresholdDeg;
 
   int get alertCount => _alertCount;
-
-  bool get hasBase => _baseNeckAngle != null;
-  double get _deltaFromBase =>
-      hasBase ? (_neckAngle - _baseNeckAngle!).abs() : 0;
-
-  /// ¿Está fuera de postura (instantáneo, sin debouncing)?
-  bool get isOutOfPostureInstant =>
-      hasBase ? _deltaFromBase > _thresholdDeg : false;
-
-  /// ¿Está fuera de postura y ya disparó alerta (tras sostener el tiempo)?
   bool get isOutOfPosture => _isCurrentlyOut;
 
-  // Setters / acciones
-  void setConnected(bool v, {String? id, String? mac}) {
-    _connected = v;
-    _deviceId = id ?? _deviceId;
-    _deviceMac = mac ?? _deviceMac;
+  // Marcar collar conectado / desconectado
+  void setConnected(bool value, {String? id, String? mac}) {
+    _connected = value;
+
+    if (!value) {
+      _deviceId = null;
+      _deviceMac = null;
+      _isCurrentlyOut = false;
+      _outStart = null;
+      _alertFiredForThisExcursion = false;
+    } else {
+      _deviceId = id ?? _deviceId;
+      _deviceMac = mac ?? _deviceMac;
+    }
+
     notifyListeners();
   }
 
+  // Ajustar umbral (slider)
   void setThreshold(double deg) {
-    _thresholdDeg = deg.clamp(5, 45);
+    _thresholdDeg = deg;
     notifyListeners();
   }
 
+  // Calibrar usando el ángulo actual como postura correcta
   void calibrateNow() {
+    if (!_connected) return;
     _baseNeckAngle = _neckAngle;
-    // Reinicia estado de excursión
     _isCurrentlyOut = false;
     _outStart = null;
     _alertFiredForThisExcursion = false;
     notifyListeners();
   }
 
+  // Quitar calibración manual
   void clearCalibration() {
     _baseNeckAngle = null;
     _isCurrentlyOut = false;
@@ -75,46 +77,54 @@ class DeviceStatusController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Llama esto cada vez que llega un ángulo nuevo desde BLE.
-  void updateNeckAngle(double value) {
-    _neckAngle = value;
+  // Resetear contador de alertas (por ejemplo al iniciar nueva sesión)
+  void resetAlerts() {
+    _alertCount = 0;
+    _isCurrentlyOut = false;
+    _outStart = null;
+    _alertFiredForThisExcursion = false;
+    notifyListeners();
+  }
 
-    if (!hasBase) {
-      notifyListeners();
-      return;
+  /// Llamar esto CADA VEZ que llega un ángulo nuevo desde BLE.
+  ///
+  /// Aquí se decide si estás en mala postura (fuera de umbral) y,
+  /// si te quedas así al menos _minBadSecondsToAlert, se incrementa alertCount.
+  void updateNeckAngle(double angle) {
+    _neckAngle = angle;
+
+    // Si no hay calibración aún, tomamos el primer ángulo como referencia
+    final double ref;
+    if (_baseNeckAngle == null) {
+      ref = _neckAngle;
+    } else {
+      ref = _baseNeckAngle!;
     }
 
-    final outNow = _deltaFromBase > _thresholdDeg;
+    final double delta = (_neckAngle - ref).abs();
+    final now = DateTime.now();
+    final bool isOut = delta > _thresholdDeg;
 
-    if (outNow) {
+    if (isOut) {
       if (!_isCurrentlyOut) {
-        // Entró a mala postura
+        // Empezó una nueva excursión de mala postura
         _isCurrentlyOut = true;
-        _outStart = DateTime.now();
+        _outStart = now;
         _alertFiredForThisExcursion = false;
-      } else {
-        // Sigue fuera, verifica si ya pasaron los 2s
-        if (!_alertFiredForThisExcursion && _outStart != null) {
-          final secs = DateTime.now().difference(_outStart!).inSeconds;
-          if (secs >= _minBadSecondsToAlert) {
-            _alertCount += 1;
-            _alertFiredForThisExcursion = true;
-          }
+      } else if (!_alertFiredForThisExcursion && _outStart != null) {
+        final secs = now.difference(_outStart!).inSeconds;
+        if (secs >= _minBadSecondsToAlert) {
+          _alertCount++;
+          _alertFiredForThisExcursion = true;
         }
       }
     } else {
-      // Volvió a postura aceptable -> resetea excursión
+      // Volvió a buena postura
       _isCurrentlyOut = false;
       _outStart = null;
       _alertFiredForThisExcursion = false;
     }
 
-    notifyListeners();
-  }
-
-  /// Para reiniciar las alertas al iniciar una nueva sesión, si deseas.
-  void resetAlerts() {
-    _alertCount = 0;
     notifyListeners();
   }
 }
