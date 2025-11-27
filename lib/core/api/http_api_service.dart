@@ -305,22 +305,65 @@ class HttpApiService implements ApiService {
     int userId, {
     int limit = 50,
   }) async {
-    try {
-      final r = await _client
-          .get(_u('/users/$userId/sessions', {'limit': '$limit'}))
-          .timeout(AppConfig.timeout);
-      final j = await _jsonOrError(r);
-      final items = (j['items'] as List? ?? []);
-      return items
-          .map((e) => SessionHistory.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      // Si el endpoint no existe, retornar lista vacía
-      if (e.toString().contains('404')) {
-        return [];
+    // Intentar diferentes endpoints posibles
+    List<String> endpoints = [
+      '/users/$userId/sessions',
+      '/sessions',
+      '/sessions/history',
+      '/users/$userId/history',
+    ];
+
+    for (String endpoint in endpoints) {
+      try {
+        final Map<String, String> params = {'limit': '$limit'};
+        // Si el endpoint no incluye el ID en la ruta (no tiene /users/ID/...),
+        // agregamos los posibles nombres de parámetros que el backend podría esperar.
+        if (!endpoint.contains('/users/')) {
+          params['id_usuario'] = userId.toString();
+          params['user_id'] = userId.toString();
+          params['user'] = userId
+              .toString(); // Encontrado en openapi.json para /sessions
+        }
+
+        final r = await _client
+            .get(_u(endpoint, params))
+            .timeout(AppConfig.timeout);
+
+        // Si es 404 (Not Found) o 422 (Unprocessable Entity - params incorrectos para este endpoint),
+        // probamos el siguiente.
+        if (r.statusCode == 404 || r.statusCode == 422) {
+          continue;
+        }
+
+        final j = await _jsonOrError(r);
+        // Algunos endpoints pueden devolver la lista directamente o dentro de 'items'
+        final List rawList;
+        // _jsonOrError siempre devuelve un Map. Si la respuesta original era una lista,
+        // estará en j['data'].
+        if (j['items'] != null && j['items'] is List) {
+          rawList = j['items'];
+        } else if (j['data'] != null && j['data'] is List) {
+          rawList = j['data'];
+        } else {
+          rawList = [];
+        }
+
+        return rawList
+            .map((e) => SessionHistory.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        // Si es 404 o 422, continuar con el siguiente endpoint
+        final msg = e.toString();
+        if (msg.contains('404') || msg.contains('422')) {
+          continue;
+        }
+        // Si es otro error, lanzarlo
+        rethrow;
       }
-      rethrow;
     }
+
+    // Si todos los endpoints fallaron, retornar lista vacía
+    return [];
   }
 
   // CAMBIO: Nuevo método para obtener historial de canjes
@@ -329,21 +372,67 @@ class HttpApiService implements ApiService {
     int userId, {
     int limit = 50,
   }) async {
-    try {
-      final r = await _client
-          .get(_u('/users/$userId/redeems', {'limit': '$limit'}))
-          .timeout(AppConfig.timeout);
-      final j = await _jsonOrError(r);
-      final items = (j['items'] as List? ?? []);
-      return items
-          .map((e) => RedeemHistory.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      // Si el endpoint no existe, retornar lista vacía
-      if (e.toString().contains('404')) {
-        return [];
+    // Intentar diferentes endpoints
+    List<String> endpoints = [
+      '/users/$userId/redeems',
+      '/users/$userId/redeem-history',
+      '/users/$userId/canjes', // Intento en español
+      '/users/$userId/rewards/history',
+      '/redeems',
+      '/rewards/history',
+      '/history/redeems',
+    ];
+
+    for (String endpoint in endpoints) {
+      try {
+        final Map<String, String> params = {'limit': '$limit'};
+        if (!endpoint.contains('/users/')) {
+          params['id_usuario'] = userId.toString();
+        }
+
+        final r = await _client
+            .get(_u(endpoint, params))
+            .timeout(AppConfig.timeout);
+
+        if (r.statusCode == 404 || r.statusCode == 422) {
+          continue;
+        }
+
+        final j = await _jsonOrError(r);
+        final List rawList;
+
+        // Buscar la lista en varias claves posibles
+        if (j['items'] != null && j['items'] is List) {
+          rawList = j['items'];
+        } else if (j['data'] != null && j['data'] is List) {
+          rawList = j['data'];
+        } else if (j['history'] != null && j['history'] is List) {
+          rawList = j['history'];
+        } else if (j['redeems'] != null && j['redeems'] is List) {
+          rawList = j['redeems'];
+        } else if (j['canjes'] != null && j['canjes'] is List) {
+          rawList = j['canjes'];
+        } else if (j['results'] != null && j['results'] is List) {
+          rawList = j['results'];
+        } else {
+          // Si no encontramos una lista en las claves conocidas, asumimos vacío
+          // (o podríamos intentar devolver j si j fuera una lista, pero _jsonOrError devuelve Map)
+          rawList = [];
+        }
+
+        return rawList
+            .map((e) => RedeemHistory.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        final msg = e.toString();
+        if (msg.contains('404') || msg.contains('422')) {
+          continue;
+        }
+        // Si falla el parseo (fromJson), intentamos el siguiente endpoint
+        // asumiendo que este no era el correcto o devolvió basura.
+        continue;
       }
-      rethrow;
     }
+    return [];
   }
 }

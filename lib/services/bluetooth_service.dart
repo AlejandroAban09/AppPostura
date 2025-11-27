@@ -14,8 +14,10 @@ import 'package:flutter_web_bluetooth/flutter_web_bluetooth.dart' as webbt;
 import '../controllers/device_status_controller.dart';
 
 /// Ajusta estos UUIDs a los de tu ESP32
-const String kServiceUuid   = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'; // <-- PON AQUÍ TU SERVICE_UUID
-const String kCharUuid      = 'abcd1234-ab12-cd34-ef56-abcdef123456'; // el que se ve en tus logs
+const String kServiceUuid =
+    'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'; // <-- PON AQUÍ TU SERVICE_UUID
+const String kCharUuid =
+    'abcd1234-ab12-cd34-ef56-abcdef123456'; // el que se ve en tus logs
 
 class BluetoothService {
   static final BluetoothService _instance = BluetoothService._internal();
@@ -34,7 +36,9 @@ class BluetoothService {
   /// Llamar desde DevicesScreen para adjuntar controlador
   void attachDeviceController(DeviceStatusController controller) {
     _deviceStatus = controller;
-    debugPrint('🔗 [BT] DeviceStatusController adjuntado (${controller.hashCode})');
+    debugPrint(
+      '🔗 [BT] DeviceStatusController adjuntado (${controller.hashCode})',
+    );
   }
 
   /// Inicia el escaneo BLE (o web bluetooth / simulación)
@@ -43,7 +47,8 @@ class BluetoothService {
 
     if (_deviceStatus == null) {
       debugPrint(
-          '⚠️ [BT] DeviceStatusController es null. Llama attachDeviceController() antes de escanear.');
+        '⚠️ [BT] DeviceStatusController es null. Llama attachDeviceController() antes de escanear.',
+      );
     }
 
     if (kIsWeb) {
@@ -59,11 +64,13 @@ class BluetoothService {
       onError: (e) => debugPrint('❌ [BT] Error en scanResults: $e'),
     );
 
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 5)).then((_) {
-      debugPrint('🔵 [BT] startScan iniciado (5s)');
-    }).catchError((e) {
-      debugPrint('❌ [BT] Error al iniciar scan: $e');
-    });
+    FlutterBluePlus.startScan(timeout: const Duration(seconds: 5))
+        .then((_) {
+          debugPrint('🔵 [BT] startScan iniciado (5s)');
+        })
+        .catchError((e) {
+          debugPrint('❌ [BT] Error al iniciar scan: $e');
+        });
   }
 
   // ==========================
@@ -90,15 +97,19 @@ class BluetoothService {
 
     try {
       // 2) Pedir dispositivo (Chrome abre popup para elegir)
-      final requestOptions =
-          webbt.RequestOptionsBuilder.acceptAllDevices(optionalServices: [
-        kServiceUuid, // necesitamos pedir permiso al servicio que vamos a usar
-      ]);
+      final requestOptions = webbt.RequestOptionsBuilder.acceptAllDevices(
+        optionalServices: [
+          kServiceUuid, // necesitamos pedir permiso al servicio que vamos a usar
+        ],
+      );
 
-      final device =
-          await webbt.FlutterWebBluetooth.instance.requestDevice(requestOptions);
+      final device = await webbt.FlutterWebBluetooth.instance.requestDevice(
+        requestOptions,
+      );
 
-      debugPrint('🌐 [BT] Dispositivo web seleccionado: ${device.name} / ${device.id}');
+      debugPrint(
+        '🌐 [BT] Dispositivo web seleccionado: ${device.name} / ${device.id}',
+      );
 
       // 3) Conectar
       await device.connect();
@@ -107,18 +118,19 @@ class BluetoothService {
       deviceStatus.setConnected(
         true,
         id: device.name ?? 'FocusCollar (web)',
-        mac: device.id ?? 'WEB',
+        mac: device.id,
       );
 
       // 4) Buscar servicio y característica
       final services = await device.discoverServices();
-      final service =
-          services.firstWhere((s) => s.uuid == kServiceUuid, orElse: () {
-        throw Exception('Servicio $kServiceUuid no encontrado en el collar');
-      });
+      final service = services.firstWhere(
+        (s) => s.uuid == kServiceUuid,
+        orElse: () {
+          throw Exception('Servicio $kServiceUuid no encontrado en el collar');
+        },
+      );
 
-      final characteristic =
-          await service.getCharacteristic(kCharUuid);
+      final characteristic = await service.getCharacteristic(kCharUuid);
 
       // 5) Escuchar notificaciones (si tu dispositivo las envía)
       try {
@@ -132,12 +144,14 @@ class BluetoothService {
         debugPrint('🌐 [BT] Notificaciones activadas en Web Bluetooth');
       } catch (e) {
         debugPrint(
-            '⚠️ [BT] No pude activar notificaciones, intentaré lecturas periódicas: $e');
+          '⚠️ [BT] No pude activar notificaciones, intentaré lecturas periódicas: $e',
+        );
 
         // Fallback simple: leer cada 200ms
         _webSimTimer?.cancel();
-        _webSimTimer =
-            Timer.periodic(const Duration(milliseconds: 200), (_) async {
+        _webSimTimer = Timer.periodic(const Duration(milliseconds: 200), (
+          _,
+        ) async {
           try {
             final byteData = await characteristic.readValue();
             final bytes = byteData.buffer.asUint8List();
@@ -167,7 +181,11 @@ class BluetoothService {
     }
 
     // Marcamos como "conectado"
-    deviceStatus.setConnected(true, id: 'Collar (simulado web)', mac: 'WEB-SIM');
+    deviceStatus.setConnected(
+      true,
+      id: 'Collar (simulado web)',
+      mac: 'WEB-SIM',
+    );
     debugPrint('✅ [BT] Collar simulado conectado en web');
 
     _webSimTimer?.cancel();
@@ -175,8 +193,7 @@ class BluetoothService {
     double base = 0.0;
     double t = 0.0;
 
-    _webSimTimer =
-        Timer.periodic(const Duration(milliseconds: 200), (timer) {
+    _webSimTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
       t += 0.2;
       final simulated = base + math.sin(t) * 5.0; // ±5 grados
       deviceStatus.updateNeckAngle(simulated);
@@ -193,8 +210,8 @@ class BluetoothService {
     for (final r in results) {
       final platformName = r.device.platformName;
       final advName = r.advertisementData.advName;
-      final lowName =
-          (platformName.isNotEmpty ? platformName : advName).toLowerCase();
+      final lowName = (platformName.isNotEmpty ? platformName : advName)
+          .toLowerCase();
 
       debugPrint(
         '🔵 [BT] Encontrado -> id=${r.device.remoteId.str}, '
@@ -216,7 +233,8 @@ class BluetoothService {
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
     debugPrint(
-        '🔵 [BT] Conectando a ${device.remoteId.str} (${device.platformName})');
+      '🔵 [BT] Conectando a ${device.remoteId.str} (${device.platformName})',
+    );
     _connectedDevice = device;
 
     final deviceStatus = _deviceStatus;
@@ -234,7 +252,8 @@ class BluetoothService {
           mac: device.remoteId.str,
         );
         debugPrint(
-            '✅ [BT] DeviceStatusController.setConnected(true) en ${deviceStatus.hashCode}');
+          '✅ [BT] DeviceStatusController.setConnected(true) en ${deviceStatus.hashCode}',
+        );
       } else {
         debugPrint('⚠️ [BT] _deviceStatus es null al conectar');
       }
@@ -249,20 +268,18 @@ class BluetoothService {
           if (c.properties.notify) {
             anyNotify = true;
             debugPrint(
-                '🔵 [BT] Suscribiendo notify -> svc=${s.uuid} chr=${c.uuid}');
-            await c.setNotifyValue(true);
-            c.value.listen(
-              (value) {
-                try {
-                  final jsonString = utf8.decode(value);
-                  debugPrint('📥 [BT] Notificación (raw): $jsonString');
-                  _handleData(jsonString);
-                } catch (e) {
-                  debugPrint('❌ [BT] Error al decodificar bytes: $e');
-                }
-              },
-              onError: (e) => debugPrint('❌ [BT] Error en char.value: $e'),
+              '🔵 [BT] Suscribiendo notify -> svc=${s.uuid} chr=${c.uuid}',
             );
+            await c.setNotifyValue(true);
+            c.value.listen((value) {
+              try {
+                final jsonString = utf8.decode(value);
+                debugPrint('📥 [BT] Notificación (raw): $jsonString');
+                _handleData(jsonString);
+              } catch (e) {
+                debugPrint('❌ [BT] Error al decodificar bytes: $e');
+              }
+            }, onError: (e) => debugPrint('❌ [BT] Error en char.value: $e'));
           }
         }
       }
@@ -303,8 +320,10 @@ class BluetoothService {
           : double.parse(rawValue.toString());
 
       // Clamp para evitar asin fuera de rango por ruido numérico
-      final double accClamped =
-          accY.clamp(-1.0, 1.0); // mantiene el valor entre -1 y 1
+      final double accClamped = accY.clamp(
+        -1.0,
+        1.0,
+      ); // mantiene el valor entre -1 y 1
 
       // Ángulo en radianes y luego en grados
       final double angleRad = math.asin(accClamped);
@@ -314,7 +333,8 @@ class BluetoothService {
       if (deviceStatus != null) {
         deviceStatus.updateNeckAngle(angleDeg);
         debugPrint(
-            '✅ [BT] updateNeckAngle($angleDeg°) llamado en ${deviceStatus.hashCode}');
+          '✅ [BT] updateNeckAngle($angleDeg°) llamado en ${deviceStatus.hashCode}',
+        );
 
         // Por si acaso no se marcó conectado antes:
         if (!deviceStatus.connected) {
@@ -323,7 +343,8 @@ class BluetoothService {
         }
       } else {
         debugPrint(
-            '⚠️ [BT] _deviceStatus es null en _handleData (no adjuntado)');
+          '⚠️ [BT] _deviceStatus es null en _handleData (no adjuntado)',
+        );
       }
     } catch (e) {
       debugPrint('❌ [BT] Error procesando JSON BLE: $e');
@@ -341,7 +362,8 @@ class BluetoothService {
     if (_connectedDevice != null) {
       try {
         debugPrint(
-            '🔵 [BT] Desconectando de ${_connectedDevice!.remoteId.str}');
+          '🔵 [BT] Desconectando de ${_connectedDevice!.remoteId.str}',
+        );
         await _connectedDevice!.disconnect();
       } catch (e) {
         debugPrint('❌ [BT] Error al desconectar: $e');

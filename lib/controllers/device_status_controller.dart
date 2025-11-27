@@ -1,5 +1,6 @@
 // lib/controllers/device_status_controller.dart
 import 'package:flutter/foundation.dart';
+import '../services/notification_service.dart';
 
 class DeviceStatusController extends ChangeNotifier {
   // Estado de conexión
@@ -8,9 +9,9 @@ class DeviceStatusController extends ChangeNotifier {
   String? _deviceMac;
 
   // Ángulos
-  double _neckAngle = 0.0;        // último ángulo recibido (en grados)
-  double? _baseNeckAngle;         // referencia "aquí estoy bien"
-  double _thresholdDeg = 15.0;    // umbral de mala postura en grados
+  double _neckAngle = 0.0; // último ángulo recibido (en grados)
+  double? _baseNeckAngle; // referencia "aquí estoy bien"
+  double _thresholdDeg = 15.0; // umbral de mala postura en grados
 
   // Alertas y detección de mala postura
   int _alertCount = 0;
@@ -18,9 +19,13 @@ class DeviceStatusController extends ChangeNotifier {
   DateTime? _outStart;
   bool _alertFiredForThisExcursion = false;
   final int _minBadSecondsToAlert;
+  final NotificationService _notificationService;
 
-  DeviceStatusController({int minBadSecondsToAlert = 3})
-      : _minBadSecondsToAlert = minBadSecondsToAlert;
+  DeviceStatusController({
+    int minBadSecondsToAlert = 3,
+    NotificationService? notificationService,
+  }) : _minBadSecondsToAlert = minBadSecondsToAlert,
+       _notificationService = notificationService ?? NotificationService();
 
   // Getters para la UI
   bool get connected => _connected;
@@ -47,6 +52,13 @@ class DeviceStatusController extends ChangeNotifier {
     } else {
       _deviceId = id ?? _deviceId;
       _deviceMac = mac ?? _deviceMac;
+
+      // Notificar conexión exitosa
+      _notificationService.showNotification(
+        id: 1,
+        title: 'Dispositivo Conectado',
+        body: 'El dispositivo $_deviceId se ha conectado correctamente.',
+      );
     }
 
     notifyListeners();
@@ -116,6 +128,13 @@ class DeviceStatusController extends ChangeNotifier {
         if (secs >= _minBadSecondsToAlert) {
           _alertCount++;
           _alertFiredForThisExcursion = true;
+
+          // Notificar mala postura
+          _notificationService.showNotification(
+            id: 2,
+            title: '¡Mala Postura Detectada!',
+            body: 'Por favor, corrige tu postura para evitar dolores.',
+          );
         }
       }
     } else {

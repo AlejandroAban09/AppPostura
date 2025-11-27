@@ -1,5 +1,4 @@
 // lib/screens/metrics_screen.dart
-// CAMBIO: Mejoras en diseño y agregado de enlaces a nuevas funcionalidades
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -60,316 +59,369 @@ class _MetricsScreenState extends State<MetricsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Métricas',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppColors.primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: AnimatedBuilder(
-        animation: _sess,
-        builder: (context, _) {
-          return RefreshIndicator(
-            onRefresh: _loadPoints,
-            color: AppColors.primaryColor,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // CAMBIO: Card de puntos mejorado
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primaryColor.withOpacity(0.1),
-                          AppColors.secondaryColor.withOpacity(0.1),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.stars,
-                          size: 48,
-                          color: AppColors.warningColor,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _points?.toString() ?? '—',
-                          style: GoogleFonts.poppins(
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                        Text(
-                          'Puntos totales',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: AppColors.secondaryText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // CAMBIO: Chips mejorados
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+      body: SafeArea(
+        child: AnimatedBuilder(
+          animation: _sess,
+          builder: (context, _) {
+            return RefreshIndicator(
+              onRefresh: _loadPoints,
+              color: AppColors.accentGold,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Chip(
-                      label: Text(
-                        _sess.isSessionRunning ? 'Sesión activa' : 'Sin sesión',
-                      ),
-                      backgroundColor: _sess.isSessionRunning
-                          ? AppColors.successColor.withOpacity(0.2)
-                          : AppColors.lightGray,
-                      avatar: Icon(
-                        _sess.isSessionRunning
-                            ? Icons.play_circle
-                            : Icons.pause_circle,
-                        size: 18,
+                    Text(
+                      'Métricas',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryText,
                       ),
                     ),
-                    Chip(
-                      label: Text('Tiempo: ${_fmt(_sess.elapsedSeconds)}'),
-                      backgroundColor: AppColors.lightGray,
-                    ),
-                    Chip(
-                      label: Text('Alertas: ${deviceCtl.alertCount}'),
-                      backgroundColor: deviceCtl.alertCount > 0
-                          ? AppColors.errorColor.withOpacity(0.2)
-                          : AppColors.lightGray,
-                      avatar: Icon(
-                        Icons.warning_amber_rounded,
-                        size: 18,
-                        color: deviceCtl.alertCount > 0
-                            ? AppColors.errorColor
-                            : AppColors.secondaryText,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Analiza tu rendimiento y progreso',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: AppColors.secondaryText,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
-                // CAMBIO: Card de postura mejorado
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: deviceCtl.isOutOfPosture
-                                ? AppColors.errorColor.withOpacity(0.1)
-                                : AppColors.successColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                    // Main Points Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardDark,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
-                          child: Icon(
-                            deviceCtl.isOutOfPosture
-                                ? Icons.report_problem
-                                : Icons.check_circle,
-                            color: deviceCtl.isOutOfPosture
-                                ? AppColors.errorColor
-                                : AppColors.successColor,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Postura actual',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.darkGray,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Ángulo: ${deviceCtl.neckAngle.toStringAsFixed(1)}° • '
-                                'Umbral: ${deviceCtl.thresholdDeg.toStringAsFixed(0)}°',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: AppColors.secondaryText,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // CAMBIO: Nuevas funcionalidades con diseño mejorado
-                Text(
-                  'Análisis y Estadísticas',
-                  style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkGray,
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                _buildFeatureCard(
-                  context,
-                  icon: Icons.history,
-                  title: 'Historial de Sesiones',
-                  subtitle: 'Minutos, alertas y bonus de todas tus sesiones',
-                  color: AppColors.primaryColor,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const SessionHistoryScreen(),
+                        ],
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                _buildFeatureCard(
-                  context,
-                  icon: Icons.trending_up,
-                  title: 'Tendencias y Rachas',
-                  subtitle: 'Estadísticas semanales y días consecutivos',
-                  color: AppColors.secondaryColor,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const TrendsScreen()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                _buildFeatureCard(
-                  context,
-                  icon: Icons.card_giftcard,
-                  title: 'Historial de Canjes',
-                  subtitle: 'Todos tus canjes y efecto de bonos',
-                  color: AppColors.warningColor,
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const RedeemHistoryScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                if (_error != null) ...[
-                  Card(
-                    color: AppColors.errorColor.withOpacity(0.1),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
+                      child: Column(
                         children: [
                           Icon(
-                            Icons.error_outline,
-                            color: AppColors.errorColor,
+                            Icons.stars,
+                            size: 48,
+                            color: AppColors.accentGold,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Error: $_error',
-                              style: GoogleFonts.poppins(
-                                color: AppColors.errorColor,
-                              ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _points?.toString() ?? '—',
+                            style: GoogleFonts.poppins(
+                              fontSize: 48,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Puntos Totales',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.7),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
+                    const SizedBox(height: 24),
 
-  Widget _buildFeatureCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                    // Session Status Chips
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _StatusChip(
+                          label: _sess.isSessionRunning
+                              ? 'Sesión Activa'
+                              : 'Sin Sesión',
+                          icon: _sess.isSessionRunning
+                              ? Icons.play_circle
+                              : Icons.pause_circle,
+                          isActive: _sess.isSessionRunning,
+                          activeColor: AppColors.successColor,
+                        ),
+                        _StatusChip(
+                          label: 'Tiempo: ${_fmt(_sess.elapsedSeconds)}',
+                          icon: Icons.timer,
+                          isActive: true,
+                          activeColor: AppColors.primaryText,
+                        ),
+                        _StatusChip(
+                          label: 'Alertas: ${deviceCtl.alertCount}',
+                          icon: Icons.warning_amber_rounded,
+                          isActive: deviceCtl.alertCount > 0,
+                          activeColor: AppColors.errorColor,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Posture Status Card
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: deviceCtl.isOutOfPosture
+                                  ? AppColors.errorColor.withOpacity(0.1)
+                                  : AppColors.successColor.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              deviceCtl.isOutOfPosture
+                                  ? Icons.report_problem
+                                  : Icons.check_circle,
+                              color: deviceCtl.isOutOfPosture
+                                  ? AppColors.errorColor
+                                  : AppColors.successColor,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Estado de Postura',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkGray,
+                                  ),
+                                ),
+                                Text(
+                                  'Ángulo: ${deviceCtl.neckAngle.toStringAsFixed(1)}° • Umbral: ${deviceCtl.thresholdDeg.toStringAsFixed(0)}°',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: AppColors.secondaryText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Stats Links
                     Text(
-                      title,
+                      'Análisis Detallado',
                       style: GoogleFonts.poppins(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.darkGray,
+                        color: AppColors.primaryText,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.secondaryText,
+                    const SizedBox(height: 16),
+
+                    _FeatureCard(
+                      icon: Icons.history,
+                      title: 'Historial de Sesiones',
+                      subtitle: 'Revisa tu actividad pasada',
+                      color: AppColors.primaryText,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SessionHistoryScreen(),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    _FeatureCard(
+                      icon: Icons.trending_up,
+                      title: 'Tendencias y Rachas',
+                      subtitle: 'Estadísticas semanales',
+                      color: AppColors.accentGold,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const TrendsScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _FeatureCard(
+                      icon: Icons.card_giftcard,
+                      title: 'Historial de Canjes',
+                      subtitle: 'Tus recompensas obtenidas',
+                      color: AppColors.successColor,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const RedeemHistoryScreen(),
+                        ),
+                      ),
+                    ),
+
+                    if (_error != null) ...[
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.errorColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppColors.errorColor,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Error: $_error',
+                                style: GoogleFonts.poppins(
+                                  color: AppColors.errorColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: AppColors.secondaryText,
-              ),
-            ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isActive;
+  final Color activeColor;
+
+  const _StatusChip({
+    required this.label,
+    required this.icon,
+    required this.isActive,
+    required this.activeColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isActive ? activeColor.withOpacity(0.1) : AppColors.lightGray,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isActive ? activeColor.withOpacity(0.3) : Colors.transparent,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: isActive ? activeColor : AppColors.secondaryText,
           ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isActive ? activeColor : AppColors.secondaryText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _FeatureCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkGray,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.lightGray),
+          ],
         ),
       ),
     );

@@ -1,9 +1,7 @@
-// lib/screens/redeem_history_screen.dart
-// CAMBIO: Nueva pantalla para mostrar historial de canjes con diseño mejorado
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
+import 'package:google_fonts/google_fonts.dart';
+import 'package:barcode_widget/barcode_widget.dart';
 import '../locator.dart';
 import '../core/session_state.dart';
 import '../core/api/api_service.dart';
@@ -21,8 +19,8 @@ class _RedeemHistoryScreenState extends State<RedeemHistoryScreen> {
   final _api = locator<ApiService>();
   final _sess = locator<SessionState>();
 
-  List<RedeemHistory> _redeems = [];
-  bool _loading = false;
+  List<RedeemHistory>? _history;
+  bool _loading = true;
   String? _error;
 
   @override
@@ -32,38 +30,24 @@ class _RedeemHistoryScreenState extends State<RedeemHistoryScreen> {
   }
 
   Future<void> _loadHistory() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
     try {
-      final redeems = await _api.getRedeemHistory(_sess.userId!, limit: 100);
-      if (!mounted) return;
-      setState(() {
-        _redeems = redeems;
-        _loading = false;
-      });
+      if (_sess.userId == null) {
+        throw Exception("Usuario no identificado");
+      }
+      final list = await _api.getRedeemHistory(_sess.userId!);
+      if (mounted) {
+        setState(() {
+          _history = list;
+          _loading = false;
+        });
+      }
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final redeemDate = DateTime(date.year, date.month, date.day);
-
-    if (redeemDate == today) {
-      return 'Hoy ${DateFormat('HH:mm').format(date)}';
-    } else if (redeemDate == today.subtract(const Duration(days: 1))) {
-      return 'Ayer ${DateFormat('HH:mm').format(date)}';
-    } else {
-      return DateFormat('dd/MM/yyyy HH:mm').format(date);
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -72,222 +56,223 @@ class _RedeemHistoryScreenState extends State<RedeemHistoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primaryText),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(
           'Historial de Canjes',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppColors.primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loading ? null : _loadHistory,
-            tooltip: 'Actualizar',
+          style: GoogleFonts.poppins(
+            color: AppColors.primaryText,
+            fontWeight: FontWeight.bold,
           ),
-        ],
+        ),
       ),
-      body: _loading
-          ? Center(
-              child: CircularProgressIndicator(color: AppColors.primaryColor),
-            )
-          : _error != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: AppColors.errorColor,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error al cargar historial',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkGray,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      _error!,
-                      style: GoogleFonts.poppins(
-                        color: AppColors.secondaryText,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: _loadHistory,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Reintentar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryText,
-                      foregroundColor: AppColors.backgroundColor,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : _redeems.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.card_giftcard,
-                    size: 64,
-                    color: AppColors.secondaryText,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay canjes registrados',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkGray,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tus canjes aparecerán aquí',
-                    style: GoogleFonts.poppins(color: AppColors.secondaryText),
-                  ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _loadHistory,
-              color: AppColors.primaryColor,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _redeems.length,
-                itemBuilder: (context, index) {
-                  final redeem = _redeems[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.secondaryColor.withOpacity(
-                                    0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.card_giftcard,
-                                  color: AppColors.secondaryColor,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      redeem.rewardName,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.darkGray,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _formatDate(redeem.timestamp),
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: AppColors.secondaryText,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatItem(
-                                  Icons.stars,
-                                  'Puntos',
-                                  '-${redeem.pointsSpent}',
-                                  AppColors.warningColor,
-                                ),
-                              ),
-                              if (redeem.bonusApplied > 0)
-                                Expanded(
-                                  child: _buildStatItem(
-                                    Icons.celebration,
-                                    'Bonus',
-                                    '-${redeem.bonusApplied}',
-                                    AppColors.successColor,
-                                  ),
-                                ),
-                              if (redeem.sessionId != null)
-                                Expanded(
-                                  child: _buildStatItem(
-                                    Icons.timer,
-                                    'Sesión',
-                                    '#${redeem.sessionId}',
-                                    AppColors.primaryColor,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+      body: _buildBody(),
     );
   }
 
-  Widget _buildStatItem(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkGray,
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Text(
+          'Error: $_error',
+          style: GoogleFonts.poppins(color: AppColors.errorColor),
+        ),
+      );
+    }
+    if (_history == null || _history!.isEmpty) {
+      return Center(
+        child: Text(
+          'No hay canjes registrados',
+          style: GoogleFonts.poppins(color: AppColors.secondaryText),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _history!.length,
+      itemBuilder: (context, index) {
+        final item = _history![index];
+        return _RedeemCard(item: item);
+      },
+    );
+  }
+}
+
+class _RedeemCard extends StatelessWidget {
+  final RedeemHistory item;
+
+  const _RedeemCard({required this.item});
+
+  void _showBarcodeDialog(BuildContext context, String code) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Código de Canje',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryText,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                code,
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 80,
+                width: double.infinity,
+                child: BarcodeWidget(
+                  barcode: Barcode.code128(),
+                  data: code,
+                  drawText: false,
+                  height: 60,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.cardDark,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cerrar'),
+                ),
+              ),
+            ],
           ),
         ),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 10,
-            color: AppColors.secondaryText,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dateFmt = DateFormat('dd MMM yyyy, HH:mm');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-      ],
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.successColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.card_giftcard,
+                  color: AppColors.successColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.rewardName,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryText,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      dateFmt.format(item.timestamp),
+                      style: GoogleFonts.poppins(
+                        color: AppColors.secondaryText,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '-${item.pointsSpent}',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.errorColor,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    'puntos',
+                    style: GoogleFonts.poppins(
+                      color: AppColors.secondaryText,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (item.tokenCode != null) ...[
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _showBarcodeDialog(context, item.tokenCode!),
+                icon: const Icon(Icons.qr_code, size: 18),
+                label: const Text('Ver Código de Barras'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryText,
+                  side: const BorderSide(color: AppColors.lightGray),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

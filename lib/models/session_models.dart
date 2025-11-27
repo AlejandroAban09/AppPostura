@@ -142,16 +142,22 @@ class SessionHistory {
   });
 
   factory SessionHistory.fromJson(Map<String, dynamic> j) => SessionHistory(
-    sessionId: j['id_sesion'] as int,
-    startTime: DateTime.parse(j['start_time'] as String),
+    sessionId: (j['id_sesion'] ?? j['id'] ?? 0) as int,
+    startTime: DateTime.parse(
+      (j['start_time'] ??
+              j['created_at'] ??
+              j['date'] ??
+              DateTime.now().toIso8601String())
+          as String,
+    ),
     endTime: j['end_time'] != null
         ? DateTime.parse(j['end_time'] as String)
         : null,
-    validMinutes: (j['valid_minutes'] ?? 0) as int,
+    validMinutes: (j['valid_minutes'] ?? j['minutes'] ?? 0) as int,
     alerts: (j['alerts'] ?? 0) as int,
-    bonusApplied: (j['bonus_applied'] ?? 0) as int,
+    bonusApplied: (j['bonus_applied'] ?? j['bonus'] ?? 0) as int,
     ssid: j['ssid'] as String?,
-    deviceName: j['device_name'] as String?,
+    deviceName: (j['device_name'] ?? j['device']) as String?,
   );
 }
 
@@ -164,6 +170,7 @@ class RedeemHistory {
   final int pointsSpent;
   final int? sessionId;
   final int bonusApplied;
+  final String? tokenCode;
 
   RedeemHistory({
     required this.redeemId,
@@ -173,15 +180,24 @@ class RedeemHistory {
     required this.pointsSpent,
     this.sessionId,
     required this.bonusApplied,
+    this.tokenCode,
   });
 
   factory RedeemHistory.fromJson(Map<String, dynamic> j) => RedeemHistory(
-    redeemId: j['id_canje'] as int,
-    timestamp: DateTime.parse(j['ts'] as String),
-    rewardId: j['id_recompensa'] as int,
-    rewardName: j['nombre_recompensa'] as String? ?? 'Recompensa',
-    pointsSpent: (j['puntos_gastados'] ?? 0) as int,
-    sessionId: j['id_sesion'] as int?,
-    bonusApplied: (j['bonus_aplicado'] ?? 0) as int,
+    redeemId: (j['id_canje'] ?? j['id'] ?? 0) as int,
+    timestamp: DateTime.parse(
+      (j['ts'] ??
+              j['created_at'] ??
+              j['date'] ??
+              DateTime.now().toIso8601String())
+          as String,
+    ),
+    rewardId: (j['id_recompensa'] ?? j['reward_id'] ?? 0) as int,
+    rewardName:
+        (j['nombre_recompensa'] ?? j['reward_name']) as String? ?? 'Recompensa',
+    pointsSpent: (j['puntos_gastados'] ?? j['points'] ?? 0) as int,
+    sessionId: (j['id_sesion'] ?? j['session_id']) as int?,
+    bonusApplied: (j['bonus_aplicado'] ?? j['bonus'] ?? 0) as int,
+    tokenCode: (j['token_code'] ?? j['code']) as String?,
   );
 }

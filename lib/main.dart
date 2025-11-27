@@ -2,14 +2,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'locator.dart';
 import 'core/session_state.dart';
 import 'controllers/device_status_controller.dart';
+import 'services/notification_service.dart';
 import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es', null);
 
   // Inicializar Hive
   await Hive.initFlutter();
@@ -18,6 +21,11 @@ void main() async {
   await Hive.openBox('password_reset_codes');
 
   setupLocator();
+
+  // Inicializar notificaciones
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await notificationService.requestPermissions();
 
   final session = locator<SessionState>();
   final router = createAppRouter(session);

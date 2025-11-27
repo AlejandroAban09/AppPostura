@@ -7,6 +7,11 @@ class SessionState extends ChangeNotifier {
   String? displayName;
 
   int? currentSessionId;
+  bool _isSessionValidForPoints = true; // Nuevo flag
+
+  // Estado del bono QR (persiste mientras la app esté viva o hasta que expire/se use)
+  String? _qrSsid;
+  DateTime? _qrScannedAt;
 
   DateTime? _sessionStartUtc;
   int _elapsedSeconds = 0;
@@ -35,6 +40,29 @@ class SessionState extends ChangeNotifier {
 
   void setSessionId(int? id) {
     currentSessionId = id;
+    notifyListeners();
+  }
+
+  bool get isSessionValidForPoints => _isSessionValidForPoints;
+
+  void setSessionValid(bool valid) {
+    _isSessionValidForPoints = valid;
+    notifyListeners();
+  }
+
+  // --- QR Bonus ---
+  String? get qrSsid => _qrSsid;
+  DateTime? get qrScannedAt => _qrScannedAt;
+
+  void setQrBonus(String ssid) {
+    _qrSsid = ssid;
+    _qrScannedAt = DateTime.now();
+    notifyListeners();
+  }
+
+  void clearQrBonus() {
+    _qrSsid = null;
+    _qrScannedAt = null;
     notifyListeners();
   }
 

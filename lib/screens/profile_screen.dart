@@ -1,5 +1,4 @@
 // lib/screens/profile_screen.dart
-// CAMBIO: Mejoras en diseño
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -59,177 +58,214 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Perfil',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppColors.primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadPoints,
-        color: AppColors.primaryColor,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // CAMBIO: Card de perfil mejorado
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primaryColor.withOpacity(0.1),
-                      AppColors.secondaryColor.withOpacity(0.1),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _loadPoints,
+          color: AppColors.accentGold,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Perfil',
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText,
                   ),
                 ),
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: AppColors.primaryColor,
-                      child: Text(
-                        name[0].toUpperCase(),
+                const SizedBox(height: 8),
+                Text(
+                  'Gestiona tu cuenta y sesión',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: AppColors.secondaryText,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Main Profile Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardDark,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.accentGold,
+                          border: Border.all(color: Colors.white, width: 4),
+                        ),
+                        child: Center(
+                          child: Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: GoogleFonts.poppins(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.cardDark,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        name,
                         style: GoogleFonts.poppins(
-                          fontSize: 32,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      name,
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkGray,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'ID: $id',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // CAMBIO: Card de puntos mejorado
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.warningColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.stars,
-                        color: AppColors.warningColor,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Puntos',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: AppColors.secondaryText,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _loading
-                                ? 'Cargando…'
-                                : (_error != null
-                                      ? 'Error'
-                                      : _points?.toString() ?? '—'),
-                            style: GoogleFonts.poppins(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.darkGray,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: _loading ? null : _loadPoints,
-                      tooltip: 'Actualizar',
-                      color: AppColors.primaryColor,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Card(
-                color: AppColors.errorColor.withOpacity(0.1),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Icon(Icons.error_outline, color: AppColors.errorColor),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Error: $_error',
-                          style: GoogleFonts.poppins(
-                            color: AppColors.errorColor,
-                          ),
+                      Text(
+                        'ID de Usuario: $id',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.7),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
 
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _logout,
-              icon: const Icon(Icons.logout),
-              label: const Text('Cerrar sesión'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.errorColor,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                // Points Card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentGold.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.stars,
+                          color: AppColors.accentGold,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Puntos Disponibles',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: AppColors.secondaryText,
+                              ),
+                            ),
+                            Text(
+                              _loading
+                                  ? '...'
+                                  : (_error != null
+                                        ? 'Error'
+                                        : _points?.toString() ?? '—'),
+                              style: GoogleFonts.poppins(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.darkGray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: _loading ? null : _loadPoints,
+                        color: AppColors.primaryText,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppColors.errorColor,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Error: $_error',
+                            style: GoogleFonts.poppins(
+                              color: AppColors.errorColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 32),
+
+                // Actions
+                Text(
+                  'Cuenta',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _logout,
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Cerrar Sesión'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.errorColor,
+                      side: const BorderSide(color: AppColors.errorColor),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
