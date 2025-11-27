@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-
+import 'package:go_router/go_router.dart';
 import '../locator.dart';
 import '../core/session_state.dart';
 import '../core/api/api_service.dart';
@@ -470,11 +470,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         icon: Icons.bar_chart_rounded,
                         color: AppColors.primaryText,
                         onTap: () {
-                          // Navegar a trends si fuera necesario, o mostrar algo
-                          _showPopup(
-                            'Próximamente',
-                            'Aquí verás tus gráficas detalladas.',
-                          );
+                          //ir a metrics
+                          context.push('/metrics');
+                          //push no esta definido, importar paquete go_router
+                          
                         },
                       ),
                     ],

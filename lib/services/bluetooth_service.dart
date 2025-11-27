@@ -13,11 +13,9 @@ import 'package:flutter_web_bluetooth/flutter_web_bluetooth.dart' as webbt;
 
 import '../controllers/device_status_controller.dart';
 
-/// Ajusta estos UUIDs a los de tu ESP32
-const String kServiceUuid =
-    'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'; // <-- PON AQUÍ TU SERVICE_UUID
-const String kCharUuid =
-    'abcd1234-ab12-cd34-ef56-abcdef123456'; // el que se ve en tus logs
+/// UUIDs de tu ESP32 (del .ino)
+const String kServiceUuid = '12345678-1234-1234-1234-1234567890ab';
+const String kCharUuid = 'abcd1234-ab12-cd34-ef56-abcdef123456';
 
 class BluetoothService {
   static final BluetoothService _instance = BluetoothService._internal();
@@ -30,8 +28,11 @@ class BluetoothService {
   /// MISMA instancia de DeviceStatusController que usa la UI (Provider)
   DeviceStatusController? _deviceStatus;
 
-  /// Timer para simulación en web (fallback)
-  Timer? _webSimTimer;
+  /// Timer para lecturas periódicas en web
+  Timer? _webReadTimer;
+
+  /// Contador de errores seguidos en web
+  int _webErrorCount = 0;
 
   /// Llamar desde DevicesScreen para adjuntar controlador
   void attachDeviceController(DeviceStatusController controller) {
@@ -41,7 +42,7 @@ class BluetoothService {
     );
   }
 
-  /// Inicia el escaneo BLE (o web bluetooth / simulación)
+  /// Inicia el escaneo BLE (móvil) o Web Bluetooth (web)
   void startScanning() {
     debugPrint('🔵 [BT] startScanning()');
 
@@ -52,12 +53,12 @@ class BluetoothService {
     }
 
     if (kIsWeb) {
-      // 👉 En web intentamos Web Bluetooth real.
+      // 👉 En web: Web Bluetooth real, sin simulación
       _startWebBluetoothScan();
       return;
     }
 
-    // 👉 En móvil usamos FlutterBluePlus como antes
+    // 👉 En móvil usamos FlutterBluePlus
     _scanSub?.cancel();
     _scanSub = FlutterBluePlus.scanResults.listen(
       _handleScanResults,
@@ -74,7 +75,7 @@ class BluetoothService {
   }
 
   // ==========================
-  //  🌐 WEB BLUETOOTH REAL
+  //  🌐 WEB BLUETOOTH REAL (SIN SIMULACIÓN, SOLO readValue)
   // ==========================
 
   Future<void> _startWebBluetoothScan() async {
@@ -86,26 +87,29 @@ class BluetoothService {
       return;
     }
 
+    // Detener cualquier timer previo
+    _webReadTimer?.cancel();
+    _webReadTimer = null;
+    _webErrorCount = 0;
+
     // 1) Comprobar soporte de API
     final supported =
         webbt.FlutterWebBluetooth.instance.isBluetoothApiSupported;
     if (!supported) {
       debugPrint('❌ [BT] Web Bluetooth no soportado en este navegador');
-      _startWebSimulation(); // fallback
+      deviceStatus.setConnected(false);
       return;
     }
 
     try {
       // 2) Pedir dispositivo (Chrome abre popup para elegir)
-      final requestOptions = webbt.RequestOptionsBuilder.acceptAllDevices(
-        optionalServices: [
-          kServiceUuid, // necesitamos pedir permiso al servicio que vamos a usar
-        ],
-      );
+      final requestOptions =
+          webbt.RequestOptionsBuilder.acceptAllDevices(optionalServices: [
+        kServiceUuid, // necesitamos pedir permiso al servicio que vamos a usar
+      ]);
 
-      final device = await webbt.FlutterWebBluetooth.instance.requestDevice(
-        requestOptions,
-      );
+      final device =
+          await webbt.FlutterWebBluetooth.instance.requestDevice(requestOptions);
 
       debugPrint(
         '🌐 [BT] Dispositivo web seleccionado: ${device.name} / ${device.id}',
@@ -118,11 +122,13 @@ class BluetoothService {
       deviceStatus.setConnected(
         true,
         id: device.name ?? 'FocusCollar (web)',
-        mac: device.id,
+        mac: device.id ?? 'WEB',
       );
 
-      // 4) Buscar servicio y característica
+      // 4) Buscar servicio y characteristic
       final services = await device.discoverServices();
+      debugPrint('🌐 [BT] Servicios web descubiertos: ${services.length}');
+
       final service = services.firstWhere(
         (s) => s.uuid == kServiceUuid,
         orElse: () {
@@ -132,72 +138,45 @@ class BluetoothService {
 
       final characteristic = await service.getCharacteristic(kCharUuid);
 
-      // 5) Escuchar notificaciones (si tu dispositivo las envía)
-      try {
-        await characteristic.startNotifications();
-        characteristic.value.listen((byteData) {
-          final bytes = byteData.buffer.asUint8List();
-          final jsonString = utf8.decode(bytes);
-          debugPrint('📥 [BT] (web) Notificación raw: $jsonString');
-          _handleData(jsonString);
-        });
-        debugPrint('🌐 [BT] Notificaciones activadas en Web Bluetooth');
-      } catch (e) {
-        debugPrint(
-          '⚠️ [BT] No pude activar notificaciones, intentaré lecturas periódicas: $e',
-        );
-
-        // Fallback simple: leer cada 200ms
-        _webSimTimer?.cancel();
-        _webSimTimer = Timer.periodic(const Duration(milliseconds: 200), (
-          _,
-        ) async {
+      // 5) Lecturas periódicas (usa PROPERTY_READ que añadimos en el ESP32)
+      _webReadTimer = Timer.periodic(
+        const Duration(milliseconds: 200),
+        (timer) async {
           try {
             final byteData = await characteristic.readValue();
             final bytes = byteData.buffer.asUint8List();
             if (bytes.isEmpty) return;
+
             final jsonString = utf8.decode(bytes);
+            debugPrint('📥 [BT] (web) Lectura periódica raw: $jsonString');
             _handleData(jsonString);
+
+            // Si salió bien, reseteamos contador de errores
+            _webErrorCount = 0;
           } catch (e) {
-            debugPrint('❌ [BT] Error en lectura periódica web: $e');
+            _webErrorCount++;
+            debugPrint(
+              '❌ [BT] Error en lectura periódica web (#$_webErrorCount): $e',
+            );
+
+            // Solo nos rendimos si falla varias veces seguidas
+            if (_webErrorCount >= 5) {
+              debugPrint(
+                '❌ [BT] Demasiados errores consecutivos en web, cancelando lecturas.',
+              );
+              timer.cancel();
+              _webReadTimer = null;
+              deviceStatus.setConnected(false);
+            }
           }
-        });
-      }
+        },
+      );
+
+      debugPrint('🌐 [BT] Lecturas periódicas activadas en Web Bluetooth');
     } catch (e) {
-      // Cualquier error (usuario cancela, no encuentra dispositivo, etc.)
       debugPrint('❌ [BT] Error en Web Bluetooth: $e');
-      _startWebSimulation();
+      deviceStatus.setConnected(false);
     }
-  }
-
-  /// 🔹 Simulación de dispositivo en web (fallback si no hay Web Bluetooth)
-  void _startWebSimulation() {
-    debugPrint('🌐 [BT] Usando collar SIMULADO en web');
-
-    final deviceStatus = _deviceStatus;
-    if (deviceStatus == null) {
-      debugPrint('⚠️ [BT] _deviceStatus es null en _startWebSimulation');
-      return;
-    }
-
-    // Marcamos como "conectado"
-    deviceStatus.setConnected(
-      true,
-      id: 'Collar (simulado web)',
-      mac: 'WEB-SIM',
-    );
-    debugPrint('✅ [BT] Collar simulado conectado en web');
-
-    _webSimTimer?.cancel();
-
-    double base = 0.0;
-    double t = 0.0;
-
-    _webSimTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
-      t += 0.2;
-      final simulated = base + math.sin(t) * 5.0; // ±5 grados
-      deviceStatus.updateNeckAngle(simulated);
-    });
   }
 
   // ==========================
@@ -271,15 +250,18 @@ class BluetoothService {
               '🔵 [BT] Suscribiendo notify -> svc=${s.uuid} chr=${c.uuid}',
             );
             await c.setNotifyValue(true);
-            c.value.listen((value) {
-              try {
-                final jsonString = utf8.decode(value);
-                debugPrint('📥 [BT] Notificación (raw): $jsonString');
-                _handleData(jsonString);
-              } catch (e) {
-                debugPrint('❌ [BT] Error al decodificar bytes: $e');
-              }
-            }, onError: (e) => debugPrint('❌ [BT] Error en char.value: $e'));
+            c.value.listen(
+              (value) {
+                try {
+                  final jsonString = utf8.decode(value);
+                  debugPrint('📥 [BT] Notificación (raw): $jsonString');
+                  _handleData(jsonString);
+                } catch (e) {
+                  debugPrint('❌ [BT] Error al decodificar bytes: $e');
+                }
+              },
+              onError: (e) => debugPrint('❌ [BT] Error en char.value: $e'),
+            );
           }
         }
       }
@@ -320,10 +302,8 @@ class BluetoothService {
           : double.parse(rawValue.toString());
 
       // Clamp para evitar asin fuera de rango por ruido numérico
-      final double accClamped = accY.clamp(
-        -1.0,
-        1.0,
-      ); // mantiene el valor entre -1 y 1
+      final double accClamped =
+          accY.clamp(-1.0, 1.0); // mantiene el valor entre -1 y 1
 
       // Ángulo en radianes y luego en grados
       final double angleRad = math.asin(accClamped);
@@ -355,9 +335,10 @@ class BluetoothService {
   Future<void> disconnect() async {
     final deviceStatus = _deviceStatus;
 
-    // Parar simulación web si estaba corriendo
-    _webSimTimer?.cancel();
-    _webSimTimer = null;
+    // Parar timer de web si estaba corriendo
+    _webReadTimer?.cancel();
+    _webReadTimer = null;
+    _webErrorCount = 0;
 
     if (_connectedDevice != null) {
       try {
@@ -374,7 +355,7 @@ class BluetoothService {
         }
       }
     } else {
-      // Si solo era simulación / web, igual marcamos desconectado
+      // Solo web / sin dispositivo
       if (deviceStatus != null) {
         deviceStatus.setConnected(false);
       }
