@@ -58,10 +58,11 @@ class _TrendsScreenState extends State<TrendsScreen> {
     final weekEnd = weekStart.add(const Duration(days: 6));
 
     final weekSessions = _sessions.where((s) {
+      final localStartTime = s.startTime.toLocal();
       final sessionDate = DateTime(
-        s.startTime.year,
-        s.startTime.month,
-        s.startTime.day,
+        localStartTime.year,
+        localStartTime.month,
+        localStartTime.day,
       );
       return sessionDate.isAfter(weekStart.subtract(const Duration(days: 1))) &&
           sessionDate.isBefore(weekEnd.add(const Duration(days: 1)));
@@ -98,10 +99,11 @@ class _TrendsScreenState extends State<TrendsScreen> {
     DateTime? lastDate;
 
     for (final session in sortedSessions) {
+      final localStartTime = session.startTime.toLocal();
       final sessionDate = DateTime(
-        session.startTime.year,
-        session.startTime.month,
-        session.startTime.day,
+        localStartTime.year,
+        localStartTime.month,
+        localStartTime.day,
       );
 
       if (lastDate == null) {
@@ -136,10 +138,11 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
     return days.map((day) {
       final daySessions = _sessions.where((s) {
+        final localStartTime = s.startTime.toLocal();
         final sessionDate = DateTime(
-          s.startTime.year,
-          s.startTime.month,
-          s.startTime.day,
+          localStartTime.year,
+          localStartTime.month,
+          localStartTime.day,
         );
         final dayDate = DateTime(day.year, day.month, day.day);
         return sessionDate == dayDate;
