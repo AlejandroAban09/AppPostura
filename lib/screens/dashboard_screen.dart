@@ -409,7 +409,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     mainAxisSpacing: 16,
                     childAspectRatio: 1.1,
                     children: [
-                      // 1. Start/Stop Button
+                      // 1. Device Status (con SVG y ángulo)
+                      _DeviceStatusCard(
+                        deviceCtl: deviceCtl,
+                        onTap: () {
+                          _showPopup(
+                            'Estado del dispositivo',
+                            deviceCtl.connected
+                                ? 'Conectado a ${deviceCtl.deviceId}'
+                                : 'No hay dispositivo conectado. Ve a la pestaña de dispositivos para conectar.',
+                          );
+                        },
+                      ),
+                      
+
+                      // 2. Start/Stop Button
                       _ActionCard(
                         title: running ? 'Finalizar' : 'Iniciar',
                         subtitle:
@@ -431,7 +445,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               },
                       ),
 
-                      // 2. QR Scanner
+                      // 3. QR Scanner
+                      
                       _ActionCard(
                         title: 'Escanear QR',
                         subtitle: _sess.qrSsid != null
@@ -440,19 +455,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         icon: Icons.qr_code_scanner,
                         color: AppColors.accentGold,
                         onTap: _openQRScanner,
-                      ),
-
-                      // 3. Device Status (con SVG y ángulo)
-                      _DeviceStatusCard(
-                        deviceCtl: deviceCtl,
-                        onTap: () {
-                          _showPopup(
-                            'Estado del dispositivo',
-                            deviceCtl.connected
-                                ? 'Conectado a ${deviceCtl.deviceId}'
-                                : 'No hay dispositivo conectado. Ve a la pestaña de dispositivos para conectar.',
-                          );
-                        },
                       ),
 
                       // 4. More / Stats
@@ -467,6 +469,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
+
+                  //nuevo orden del grid, la columna 3 se concvierte en la 1, la 1 en la dos, la 2 en la 3 y la 4 en la 4
+                  // nuevo grid orden
+
+
+
                 ],
               ),
             ),
