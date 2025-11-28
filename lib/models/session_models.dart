@@ -184,20 +184,34 @@ class RedeemHistory {
   });
 
   factory RedeemHistory.fromJson(Map<String, dynamic> j) => RedeemHistory(
-    redeemId: (j['id_canje'] ?? j['id'] ?? 0) as int,
-    timestamp: DateTime.parse(
-      (j['ts'] ??
-              j['created_at'] ??
-              j['date'] ??
-              DateTime.now().toIso8601String())
-          as String,
-    ),
-    rewardId: (j['id_recompensa'] ?? j['reward_id'] ?? 0) as int,
-    rewardName:
-        (j['nombre_recompensa'] ?? j['reward_name']) as String? ?? 'Recompensa',
-    pointsSpent: (j['puntos_gastados'] ?? j['points'] ?? 0) as int,
-    sessionId: (j['id_sesion'] ?? j['session_id']) as int?,
-    bonusApplied: (j['bonus_aplicado'] ?? j['bonus'] ?? 0) as int,
-    tokenCode: (j['token_code'] ?? j['code']) as String?,
-  );
+        // 👇 tu API usa id_redemption
+        redeemId: (j['id_redemption'] ?? j['id'] ?? 0) as int,
+
+        // 👇 tu API usa created_at
+        timestamp: DateTime.parse(
+          (j['created_at'] ??
+                  j['ts'] ??
+                  j['date'] ??
+                  DateTime.now().toIso8601String())
+              as String,
+        ),
+
+        // De momento tu JSON no manda id de recompensa, lo dejamos en 0
+        rewardId: (j['reward_id'] ?? 0) as int,
+
+        // 👇 tu API usa reward_name
+        rewardName:
+            (j['reward_name'] ?? j['nombre_recompensa']) as String? ??
+                'Recompensa',
+
+        // 👇 tu API usa cost_points
+        pointsSpent:
+            (j['cost_points'] ?? j['puntos_gastados'] ?? j['points'] ?? 0)
+                as int,
+
+        // Tu JSON actual no lleva estos, pero los dejamos preparados
+        sessionId: (j['id_sesion'] ?? j['session_id']) as int?,
+        bonusApplied: (j['bonus_aplicado'] ?? j['bonus'] ?? 0) as int,
+        tokenCode: (j['token_code'] ?? j['code']) as String?,
+      );
 }

@@ -54,6 +54,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.13.1
   flutter_web_bluetooth: ^1.1.0
+  flutter_svg: ^2.0.10+1
 
 flutter:
   uses-material-design: true
@@ -63,6 +64,7 @@ flutter:
     # - assets/audio/Rain.mp3
     # - assets/audio/Waves.mp3
     # - assets/audio/alert.mp3
+    - assets/imagenes/spine.svg
     - assets/imagenes/logo.png
     - assets/imagenes/ZenCat.jpg
     - assets/imagenes/Owlight.jpg

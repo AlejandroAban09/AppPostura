@@ -366,73 +366,29 @@ class HttpApiService implements ApiService {
     return [];
   }
 
-  // CAMBIO: Nuevo método para obtener historial de canjes
-  @override
+    @override
   Future<List<RedeemHistory>> getRedeemHistory(
     int userId, {
     int limit = 50,
   }) async {
-    // Intentar diferentes endpoints
-    List<String> endpoints = [
-      '/users/$userId/redeems',
-      '/users/$userId/redeem-history',
-      '/users/$userId/canjes', // Intento en español
-      '/users/$userId/rewards/history',
-      '/redeems',
-      '/rewards/history',
-      '/history/redeems',
-    ];
+    // 👉 Endpoint real que ya verificaste en el navegador:
+    // GET /users/{id}/redemptions?limit=50
+    final r = await _client
+        .get(
+          _u('/users/$userId/redemptions', {
+            'limit': '$limit',
+          }),
+        )
+        .timeout(AppConfig.timeout);
 
-    for (String endpoint in endpoints) {
-      try {
-        final Map<String, String> params = {'limit': '$limit'};
-        if (!endpoint.contains('/users/')) {
-          params['id_usuario'] = userId.toString();
-        }
+    final j = await _jsonOrError(r);
 
-        final r = await _client
-            .get(_u(endpoint, params))
-            .timeout(AppConfig.timeout);
+    // Tu API devuelve: { ok: true, items: [ ... ] }
+    final items = (j['items'] as List?) ?? [];
 
-        if (r.statusCode == 404 || r.statusCode == 422) {
-          continue;
-        }
-
-        final j = await _jsonOrError(r);
-        final List rawList;
-
-        // Buscar la lista en varias claves posibles
-        if (j['items'] != null && j['items'] is List) {
-          rawList = j['items'];
-        } else if (j['data'] != null && j['data'] is List) {
-          rawList = j['data'];
-        } else if (j['history'] != null && j['history'] is List) {
-          rawList = j['history'];
-        } else if (j['redeems'] != null && j['redeems'] is List) {
-          rawList = j['redeems'];
-        } else if (j['canjes'] != null && j['canjes'] is List) {
-          rawList = j['canjes'];
-        } else if (j['results'] != null && j['results'] is List) {
-          rawList = j['results'];
-        } else {
-          // Si no encontramos una lista en las claves conocidas, asumimos vacío
-          // (o podríamos intentar devolver j si j fuera una lista, pero _jsonOrError devuelve Map)
-          rawList = [];
-        }
-
-        return rawList
-            .map((e) => RedeemHistory.fromJson(e as Map<String, dynamic>))
-            .toList();
-      } catch (e) {
-        final msg = e.toString();
-        if (msg.contains('404') || msg.contains('422')) {
-          continue;
-        }
-        // Si falla el parseo (fromJson), intentamos el siguiente endpoint
-        // asumiendo que este no era el correcto o devolvió basura.
-        continue;
-      }
-    }
-    return [];
+    return items
+        .map((e) => RedeemHistory.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
+
 }

@@ -1,7 +1,9 @@
+// lib/screens/redeem_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:barcode_widget/barcode_widget.dart';
+
 import '../locator.dart';
 import '../core/session_state.dart';
 import '../core/api/api_service.dart';
@@ -34,11 +36,18 @@ class _RedeemHistoryScreenState extends State<RedeemHistoryScreen> {
       if (_sess.userId == null) {
         throw Exception("Usuario no identificado");
       }
-      final list = await _api.getRedeemHistory(_sess.userId!);
+
+      // 👉 Usar el nuevo endpoint con límite
+      final list = await _api.getRedeemHistory(
+        _sess.userId!,
+        limit: 50,
+      );
+
       if (mounted) {
         setState(() {
           _history = list;
           _loading = false;
+          _error = null;
         });
       }
     } catch (e) {
@@ -70,7 +79,12 @@ class _RedeemHistoryScreenState extends State<RedeemHistoryScreen> {
           ),
         ),
       ),
-      body: _buildBody(),
+      // Pull-to-refresh para recargar el historial
+      body: RefreshIndicator(
+        onRefresh: _loadHistory,
+        color: AppColors.accentGold,
+        child: _buildBody(),
+      ),
     );
   }
 
@@ -79,19 +93,30 @@ class _RedeemHistoryScreenState extends State<RedeemHistoryScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
-      return Center(
-        child: Text(
-          'Error: $_error',
-          style: GoogleFonts.poppins(color: AppColors.errorColor),
-        ),
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Center(
+            child: Text(
+              'Error: $_error',
+              style: GoogleFonts.poppins(color: AppColors.errorColor),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       );
     }
     if (_history == null || _history!.isEmpty) {
-      return Center(
-        child: Text(
-          'No hay canjes registrados',
-          style: GoogleFonts.poppins(color: AppColors.secondaryText),
-        ),
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Center(
+            child: Text(
+              'No hay canjes registrados',
+              style: GoogleFonts.poppins(color: AppColors.secondaryText),
+            ),
+          ),
+        ],
       );
     }
 
@@ -192,6 +217,7 @@ class _RedeemCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Fila principal: icono + nombre + fecha + puntos
           Row(
             children: [
               Container(
@@ -251,6 +277,49 @@ class _RedeemCard extends StatelessWidget {
               ),
             ],
           ),
+
+          // Info extra: sesión + bonus
+          if (item.sessionId != null || item.bonusApplied > 0) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (item.sessionId != null) ...[
+                  const Icon(
+                    Icons.access_time,
+                    size: 16,
+                    color: AppColors.secondaryText,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Sesión #${item.sessionId}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                ],
+                if (item.sessionId != null && item.bonusApplied > 0)
+                  const SizedBox(width: 12),
+                if (item.bonusApplied > 0) ...[
+                  const Icon(
+                    Icons.stars,
+                    size: 16,
+                    color: AppColors.accentGold,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Bonus: ${item.bonusApplied} pts',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.accentGold,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+
+          // Botón para ver código de barras
           if (item.tokenCode != null) ...[
             const SizedBox(height: 12),
             const Divider(),

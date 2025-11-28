@@ -1,8 +1,12 @@
 // lib/screens/dashboard_screen.dart
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
 import '../locator.dart';
 import '../core/session_state.dart';
 import '../core/api/api_service.dart';
@@ -408,9 +412,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       // 1. Start/Stop Button
                       _ActionCard(
                         title: running ? 'Finalizar' : 'Iniciar',
-                        subtitle: running
-                            ? 'Sesión en curso'
-                            : 'Comenzar ahora',
+                        subtitle:
+                            running ? 'Sesión en curso' : 'Comenzar ahora',
                         icon: running
                             ? Icons.stop_circle_outlined
                             : Icons.play_circle_outline,
@@ -439,23 +442,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         onTap: _openQRScanner,
                       ),
 
-                      // 3. Device Status
-                      _ActionCard(
-                        title: deviceCtl.connected
-                            ? 'Conectado'
-                            : 'Desconectado',
-                        subtitle: deviceCtl.deviceId ?? 'Sin dispositivo',
-                        icon: deviceCtl.connected
-                            ? Icons.bluetooth_connected
-                            : Icons.bluetooth_disabled,
-                        color: deviceCtl.connected
-                            ? AppColors.primaryText
-                            : AppColors.secondaryText,
+                      // 3. Device Status (con SVG y ángulo)
+                      _DeviceStatusCard(
+                        deviceCtl: deviceCtl,
                         onTap: () {
-                          // Podría llevar a pantalla de dispositivos
-                          // context.push('/devices');
                           _showPopup(
-                            'Estado',
+                            'Estado del dispositivo',
                             deviceCtl.connected
                                 ? 'Conectado a ${deviceCtl.deviceId}'
                                 : 'No hay dispositivo conectado. Ve a la pestaña de dispositivos para conectar.',
@@ -470,10 +462,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         icon: Icons.bar_chart_rounded,
                         color: AppColors.primaryText,
                         onTap: () {
-                          //ir a metrics
                           context.push('/metrics');
-                          //push no esta definido, importar paquete go_router
-                          
                         },
                       ),
                     ],
@@ -604,6 +593,150 @@ class _ActionCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 🔹 Tarjeta especial para el estado del dispositivo con SVG + ángulo
+class _DeviceStatusCard extends StatelessWidget {
+  final DeviceStatusController deviceCtl;
+  final VoidCallback? onTap;
+
+  const _DeviceStatusCard({
+    required this.deviceCtl,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final angle = deviceCtl.neckAngle;
+    final base = deviceCtl.baseNeckAngle ?? angle;
+    final delta = (angle - base).abs();
+    final isOut = deviceCtl.isOutOfPosture;
+
+    // Inclinar un poco la columna según la diferencia
+    final tiltDeg = (angle - base).clamp(-30.0, 30.0);
+    final tiltRad = tiltDeg * math.pi / 180.0;
+
+    final connected = deviceCtl.connected;
+    final title = connected ? 'Conectado' : 'Desconectado';
+    final subtitle =
+        connected ? '${deviceCtl.deviceId ?? 'Dispositivo'}' : 'Sin dispositivo';
+
+    final color = connected
+        ? (isOut ? AppColors.errorColor : AppColors.successColor)
+        : AppColors.secondaryText;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Columna + icono BT
+            Expanded(
+              child: Center(
+                child: Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    Center(
+                      child: SizedBox(
+                        height: 80,
+                        child: Transform.rotate(
+                          angle: -tiltRad,
+                          child: SvgPicture.asset(
+                            'assets/imagenes/spine.svg',
+                            colorFilter: ColorFilter.mode(
+                              color,
+                              BlendMode.srcIn,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        connected
+                            ? Icons.bluetooth_connected
+                            : Icons.bluetooth_disabled,
+                        size: 18,
+                        color: connected
+                            ? AppColors.primaryText
+                            : AppColors.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Estado + ángulo
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: AppColors.darkGray,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: AppColors.secondaryText,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (connected) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ángulo: ${angle.toStringAsFixed(1)}°',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
+                  Text(
+                    'Δ ${delta.toStringAsFixed(1)}° • Umbral ${deviceCtl.thresholdDeg.toStringAsFixed(0)}°',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: AppColors.secondaryText,
+                    ),
+                  ),
+                ],
               ],
             ),
           ],

@@ -1,6 +1,8 @@
 // lib/controllers/device_status_controller.dart
 import 'package:flutter/foundation.dart';
 import '../services/notification_service.dart';
+import '../locator.dart';
+import '../core/session_state.dart';
 
 class DeviceStatusController extends ChangeNotifier {
   // Estado de conexión
@@ -22,10 +24,10 @@ class DeviceStatusController extends ChangeNotifier {
   final NotificationService _notificationService;
 
   DeviceStatusController({
-    int minBadSecondsToAlert = 3,
+    int minBadSecondsToAlert = 5,
     NotificationService? notificationService,
-  }) : _minBadSecondsToAlert = minBadSecondsToAlert,
-       _notificationService = notificationService ?? NotificationService();
+  })  : _minBadSecondsToAlert = minBadSecondsToAlert,
+        _notificationService = notificationService ?? NotificationService();
 
   // Getters para la UI
   bool get connected => _connected;
@@ -53,7 +55,7 @@ class DeviceStatusController extends ChangeNotifier {
       _deviceId = id ?? _deviceId;
       _deviceMac = mac ?? _deviceMac;
 
-      // Notificar conexión exitosa
+      // Notificar conexión exitosa (esto sí puede ser siempre)
       _notificationService.showNotification(
         id: 1,
         title: 'Dispositivo Conectado',
@@ -102,6 +104,7 @@ class DeviceStatusController extends ChangeNotifier {
   ///
   /// Aquí se decide si estás en mala postura (fuera de umbral) y,
   /// si te quedas así al menos _minBadSecondsToAlert, se incrementa alertCount.
+  /// PERO ahora solo cuenta y notifica si hay sesión activa.
   void updateNeckAngle(double angle) {
     _neckAngle = angle;
 
@@ -117,24 +120,37 @@ class DeviceStatusController extends ChangeNotifier {
     final now = DateTime.now();
     final bool isOut = delta > _thresholdDeg;
 
+    // Saber si hay sesión activa
+    final sessionState = locator<SessionState>();
+    final bool sessionRunning = sessionState.isSessionRunning;
+
     if (isOut) {
       if (!_isCurrentlyOut) {
         // Empezó una nueva excursión de mala postura
         _isCurrentlyOut = true;
         _outStart = now;
+        // NOTA: no marcamos _alertFiredForThisExcursion aquí
         _alertFiredForThisExcursion = false;
       } else if (!_alertFiredForThisExcursion && _outStart != null) {
         final secs = now.difference(_outStart!).inSeconds;
-        if (secs >= _minBadSecondsToAlert) {
-          _alertCount++;
-          _alertFiredForThisExcursion = true;
 
-          // Notificar mala postura
-          _notificationService.showNotification(
-            id: 2,
-            title: '¡Mala Postura Detectada!',
-            body: 'Por favor, corrige tu postura para evitar dolores.',
-          );
+        if (secs >= _minBadSecondsToAlert) {
+          // 👇 SOLO si hay sesión activa contamos y notificamos
+          if (sessionRunning) {
+            _alertCount++;
+            _alertFiredForThisExcursion = true;
+
+            // Notificar mala postura
+            _notificationService.showNotification(
+              id: 2,
+              title: '¡Mala Postura Detectada!',
+              body: 'Por favor, corrige tu postura para evitar dolores.',
+            );
+          } else {
+            // Sin sesión: no contamos ni notificamos,
+            // y dejamos _alertFiredForThisExcursion en false
+            // para que, si luego inicias sesión, pueda disparar.
+          }
         }
       }
     } else {
