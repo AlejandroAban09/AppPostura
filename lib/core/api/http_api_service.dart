@@ -42,52 +42,37 @@ class HttpApiService implements ApiService {
     return AuthResult(j['id_usuario'] as int, j['display_name'] as String?);
   }
 
+  /// Crear usuario en /users usando también correo y display_name
   @override
-  Future<AuthResult> registerUser(String username, String password) async {
-    // Intentar diferentes endpoints posibles
-    List<String> endpoints = [
-      '/register',
-      '/auth/register',
-      '/users/register',
-      '/users',
-    ];
+  Future<AuthResult> registerUser(
+    String username,
+    String password, {
+    String? correo,
+    String? displayName,
+  }) async {
+    final body = <String, dynamic>{
+      'username': username,
+      'password': password,
+      'correo': correo,
+      'display_name': displayName ?? username,
+    };
 
-    for (String endpoint in endpoints) {
-      try {
-        final r = await _client
-            .post(
-              _u(endpoint),
-              headers: {'Content-Type': 'application/json'},
-              body: json.encode({'username': username, 'password': password}),
-            )
-            .timeout(AppConfig.timeout);
+    final r = await _client
+        .post(
+          _u('/users'),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode(body),
+        )
+        .timeout(AppConfig.timeout);
 
-        if (r.statusCode == 404) {
-          // Este endpoint no existe, intentar el siguiente
-          continue;
-        }
-
-        final j = await _jsonOrError(r);
-        return AuthResult(j['id_usuario'] as int, j['display_name'] as String?);
-      } catch (e) {
-        // Si es 404, continuar con el siguiente endpoint
-        if (e.toString().contains('404')) {
-          continue;
-        }
-        // Si es otro error, lanzarlo
-        rethrow;
-      }
-    }
-
-    // Si todos los endpoints fallaron con 404, lanzar error
-    throw Exception(
-      'HTTP 404: El endpoint de registro no está disponible en el servidor',
-    );
+    final j = await _jsonOrError(r);
+    // Tu API devuelve algo como { "ok": true, "id_usuario": 17 }
+    final id = (j['id_usuario'] ?? j['id'] ?? 0) as int;
+    return AuthResult(id, displayName ?? username);
   }
 
   @override
   Future<void> requestPasswordReset(String email) async {
-    // Intentar diferentes endpoints posibles para solicitar restablecimiento
     List<String> endpoints = [
       '/auth/forgot-password',
       '/auth/request-password-reset',
@@ -107,23 +92,19 @@ class HttpApiService implements ApiService {
             .timeout(AppConfig.timeout);
 
         if (r.statusCode == 404) {
-          // Este endpoint no existe, intentar el siguiente
           continue;
         }
 
         await _jsonOrError(r);
-        return; // Éxito
+        return;
       } catch (e) {
-        // Si es 404, continuar con el siguiente endpoint
         if (e.toString().contains('404')) {
           continue;
         }
-        // Si es otro error, lanzarlo
         rethrow;
       }
     }
 
-    // Si todos los endpoints fallaron con 404, lanzar error
     throw Exception(
       'HTTP 404: El endpoint de solicitud de restablecimiento no está disponible en el servidor',
     );
@@ -135,7 +116,6 @@ class HttpApiService implements ApiService {
     String verificationCode,
     String newPassword,
   ) async {
-    // Intentar diferentes endpoints posibles para verificar código y restablecer
     List<String> endpoints = [
       '/auth/reset-password',
       '/auth/verify-reset-code',
@@ -159,23 +139,19 @@ class HttpApiService implements ApiService {
             .timeout(AppConfig.timeout);
 
         if (r.statusCode == 404) {
-          // Este endpoint no existe, intentar el siguiente
           continue;
         }
 
         await _jsonOrError(r);
-        return; // Éxito
+        return;
       } catch (e) {
-        // Si es 404, continuar con el siguiente endpoint
         if (e.toString().contains('404')) {
           continue;
         }
-        // Si es otro error, lanzarlo
         rethrow;
       }
     }
 
-    // Si todos los endpoints fallaron con 404, lanzar error
     throw Exception(
       'HTTP 404: El endpoint de verificación de código no está disponible en el servidor',
     );
@@ -299,13 +275,12 @@ class HttpApiService implements ApiService {
     return RedeemResult.fromJson(j);
   }
 
-  // CAMBIO: Nuevo método para obtener historial de sesiones
+  // Historial de sesiones
   @override
   Future<List<SessionHistory>> getSessionHistory(
     int userId, {
     int limit = 50,
   }) async {
-    // Intentar diferentes endpoints posibles
     List<String> endpoints = [
       '/users/$userId/sessions',
       '/sessions',
@@ -316,30 +291,22 @@ class HttpApiService implements ApiService {
     for (String endpoint in endpoints) {
       try {
         final Map<String, String> params = {'limit': '$limit'};
-        // Si el endpoint no incluye el ID en la ruta (no tiene /users/ID/...),
-        // agregamos los posibles nombres de parámetros que el backend podría esperar.
         if (!endpoint.contains('/users/')) {
           params['id_usuario'] = userId.toString();
           params['user_id'] = userId.toString();
-          params['user'] = userId
-              .toString(); // Encontrado en openapi.json para /sessions
+          params['user'] = userId.toString();
         }
 
         final r = await _client
             .get(_u(endpoint, params))
             .timeout(AppConfig.timeout);
 
-        // Si es 404 (Not Found) o 422 (Unprocessable Entity - params incorrectos para este endpoint),
-        // probamos el siguiente.
         if (r.statusCode == 404 || r.statusCode == 422) {
           continue;
         }
 
         final j = await _jsonOrError(r);
-        // Algunos endpoints pueden devolver la lista directamente o dentro de 'items'
         final List rawList;
-        // _jsonOrError siempre devuelve un Map. Si la respuesta original era una lista,
-        // estará en j['data'].
         if (j['items'] != null && j['items'] is List) {
           rawList = j['items'];
         } else if (j['data'] != null && j['data'] is List) {
@@ -352,27 +319,22 @@ class HttpApiService implements ApiService {
             .map((e) => SessionHistory.fromJson(e as Map<String, dynamic>))
             .toList();
       } catch (e) {
-        // Si es 404 o 422, continuar con el siguiente endpoint
         final msg = e.toString();
         if (msg.contains('404') || msg.contains('422')) {
           continue;
         }
-        // Si es otro error, lanzarlo
         rethrow;
       }
     }
-
-    // Si todos los endpoints fallaron, retornar lista vacía
     return [];
   }
 
-    @override
+  // Historial de canjes (endpoint real)
+  @override
   Future<List<RedeemHistory>> getRedeemHistory(
     int userId, {
     int limit = 50,
   }) async {
-    // 👉 Endpoint real que ya verificaste en el navegador:
-    // GET /users/{id}/redemptions?limit=50
     final r = await _client
         .get(
           _u('/users/$userId/redemptions', {
@@ -382,13 +344,10 @@ class HttpApiService implements ApiService {
         .timeout(AppConfig.timeout);
 
     final j = await _jsonOrError(r);
-
-    // Tu API devuelve: { ok: true, items: [ ... ] }
     final items = (j['items'] as List?) ?? [];
 
     return items
         .map((e) => RedeemHistory.fromJson(e as Map<String, dynamic>))
         .toList();
   }
-
 }

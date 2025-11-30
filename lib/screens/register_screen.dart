@@ -18,6 +18,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
@@ -25,8 +26,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
 
   String? _validateUsername(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Por favor ingresa un nombre de usuario';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    final v = value?.trim() ?? '';
+    if (v.isEmpty) {
+      return 'Por favor ingresa un correo';
+    }
+    // Validación sencillita
+    if (!v.contains('@') || !v.contains('.')) {
+      return 'Ingresa un correo válido';
     }
     return null;
   }
@@ -51,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  void _register() async {
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -59,145 +72,75 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final box = Hive.box('focusme_users');
       final username = _usernameController.text.trim();
       final password = _passwordController.text;
+      final correo = _emailController.text.trim();
 
-      if (username.isEmpty) {
+      if (username.isEmpty || correo.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('El nombre de usuario no puede estar vacío'),
+          const SnackBar(
+            content: Text('Usuario y correo no pueden estar vacíos'),
             backgroundColor: AppColors.errorColor,
           ),
         );
         return;
       }
 
-      // CAMBIO: Intentar registrar en la API primero
-      int? apiUserId;
-      bool apiRegistrationSuccess = false;
+      final api = locator<ApiService>();
 
-      try {
-        final api = locator<ApiService>();
-        final authResult = await api.registerUser(username, password);
-        apiUserId = authResult.userId;
-        apiRegistrationSuccess = true;
-      } catch (apiError) {
-        // Si es 404, el endpoint no existe, registrar solo localmente
-        if (apiError.toString().contains('404') ||
-            apiError.toString().contains('no está disponible')) {
-          // El endpoint de registro no existe en la API, continuar con registro local
-          apiRegistrationSuccess = false;
-        } else {
-          // Otro error de la API - verificar si es porque el usuario ya existe
-          String errorMessage = 'Error al registrar en el servidor';
+      // 👉 Llamamos a POST /users usando también el correo
+      final authResult = await api.registerUser(
+        username,
+        password,
+        correo: correo,
+        displayName: username,
+      );
 
-          if (apiError.toString().contains('409') ||
-              apiError.toString().toLowerCase().contains('ya existe') ||
-              apiError.toString().toLowerCase().contains('already exists')) {
-            errorMessage = 'El nombre de usuario ya existe en el servidor';
-            // Si ya existe en el servidor, verificar localmente
-            if (box.containsKey(username)) {
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('El nombre de usuario ya existe'),
-                  backgroundColor: AppColors.errorColor,
-                ),
-              );
-              return;
-            }
-            // Si no existe localmente pero sí en el servidor, no continuar
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errorMessage),
-                backgroundColor: AppColors.errorColor,
-                duration: const Duration(seconds: 4),
-              ),
-            );
-            return;
-          } else if (apiError.toString().contains('400') ||
-              apiError.toString().toLowerCase().contains('invalid')) {
-            errorMessage = 'Datos inválidos. Por favor verifica tu información';
-          } else if (apiError.toString().contains('401') ||
-              apiError.toString().contains('403')) {
-            errorMessage = 'No tienes permisos para realizar esta acción';
-          } else if (apiError.toString().contains('500') ||
-              apiError.toString().toLowerCase().contains('server')) {
-            errorMessage = 'Error del servidor. Por favor intenta más tarde';
-          } else {
-            errorMessage =
-                'Error al conectar con el servidor: ${apiError.toString()}';
-          }
-
-          // Si hay un error de conexión (no 404), guardar localmente de todas formas
-          // pero mostrar el error
-          if (!apiError.toString().contains('404') &&
-              !apiError.toString().contains('no está disponible')) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('$errorMessage. Se guardará localmente.'),
-                backgroundColor: AppColors.warningColor,
-                duration: const Duration(seconds: 4),
-              ),
-            );
-          }
-        }
-      }
-
-      // CAMBIO: Verificar si el usuario ya existe localmente (solo si no se registró en API)
-      if (!apiRegistrationSuccess && box.containsKey(username)) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('El nombre de usuario ya existe localmente'),
-            backgroundColor: AppColors.errorColor,
-          ),
-        );
-        return;
-      }
-
-      // CAMBIO: Guardar el usuario localmente (siempre, incluso si la API funcionó)
+      // 👉 Opcional: guardamos también en Hive, como ya hacías
+      final box = Hive.box('focusme_users');
       await box.put(username, {
         'password': password,
         'points': 0,
         'focus_time': 0,
         'pomodoro_sessions': 0,
         'sound_enabled': true,
-        if (apiUserId != null)
-          'api_user_id': apiUserId, // Solo si se registró en la API
+        'api_user_id': authResult.userId,
+        'display_name': authResult.displayName ?? username,
+        'correo': correo,
       });
 
-      // Guardar el usuario actual
       await box.put('current_user', username);
 
       if (!mounted) return;
 
-      // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            apiRegistrationSuccess
-                ? '¡Cuenta creada exitosamente en el servidor!'
-                : '¡Cuenta creada exitosamente! (Solo local)',
-          ),
+        const SnackBar(
+          content: Text('¡Cuenta creada exitosamente!'),
           backgroundColor: AppColors.successColor,
         ),
       );
 
-      // Limpiar los campos después de un breve delay
       await Future.delayed(const Duration(milliseconds: 500));
-
       if (!mounted) return;
       context.go('/login');
     } catch (e) {
       if (!mounted) return;
+
+      String msg = e.toString();
+
+      // Si tu backend manda un detail tipo "usuario o correo ya existen"
+      final lower = msg.toLowerCase();
+      if (lower.contains('ya existe') ||
+          lower.contains('ya existen') ||
+          lower.contains('duplicate') ||
+          lower.contains('unique')) {
+        msg = 'El usuario o correo ya están registrados.';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error inesperado: ${e.toString()}'),
+          content: Text('Error al registrar: $msg'),
           backgroundColor: AppColors.errorColor,
         ),
       );
@@ -211,6 +154,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -266,6 +210,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       key: _formKey,
                       child: Column(
                         children: [
+                          // Usuario
                           TextFormField(
                             controller: _usernameController,
                             validator: _validateUsername,
@@ -313,6 +258,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             textInputAction: TextInputAction.next,
                           ),
                           const SizedBox(height: 20),
+
+                          // Correo
+                          TextFormField(
+                            controller: _emailController,
+                            validator: _validateEmail,
+                            decoration: InputDecoration(
+                              labelText: 'Correo electrónico',
+                              labelStyle: GoogleFonts.poppins(
+                                color: AppColors.darkGray,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(
+                                  color: AppColors.backgroundColor,
+                                  width: 2.0,
+                                ),
+                                borderRadius: BorderRadius.circular(15.0),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(
+                                  color: AppColors.primaryColor,
+                                  width: 2.0,
+                                ),
+                                borderRadius: BorderRadius.circular(15.0),
+                              ),
+                              errorBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(
+                                  color: AppColors.errorColor,
+                                  width: 2.0,
+                                ),
+                                borderRadius: BorderRadius.circular(15.0),
+                              ),
+                              focusedErrorBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(
+                                  color: AppColors.errorColor,
+                                  width: 2.0,
+                                ),
+                                borderRadius: BorderRadius.circular(15.0),
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.email_outlined,
+                                color: AppColors.primaryColor,
+                              ),
+                              filled: true,
+                              fillColor: AppColors.lightGray,
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Contraseña
                           TextFormField(
                             controller: _passwordController,
                             validator: _validatePassword,
@@ -378,6 +374,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             textInputAction: TextInputAction.next,
                           ),
                           const SizedBox(height: 20),
+
+                          // Confirmar contraseña
                           TextFormField(
                             controller: _confirmPasswordController,
                             validator: _validateConfirmPassword,
@@ -440,6 +438,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onFieldSubmitted: (_) => _register(),
                           ),
                           const SizedBox(height: 40),
+
                           ElevatedButton(
                             onPressed: _isLoading ? null : _register,
                             style: ElevatedButton.styleFrom(
@@ -473,9 +472,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 : const Text('Registrarse'),
                           ),
                           TextButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () => context.go('/login'),
+                            onPressed:
+                                _isLoading ? null : () => context.go('/login'),
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.primaryText,
                               backgroundColor: Colors.transparent,

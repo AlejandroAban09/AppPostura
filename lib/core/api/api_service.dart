@@ -8,13 +8,17 @@ abstract class ApiService {
   Future<AuthResult> authSimpleGet(String userOrEmail, String pass);
 
   // Register new user (POST /register)
-  Future<AuthResult> registerUser(String username, String password);
+  Future<AuthResult> registerUser(
+    String username,
+    String password, {
+    String? correo,
+    String? displayName,
+  });
 
-  // Password recovery
   Future<void> requestPasswordReset(String email);
   Future<void> verifyResetCodeAndSetPassword(
     String email,
-    String code,
+    String verificationCode,
     String newPassword,
   );
 
