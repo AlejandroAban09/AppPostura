@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-import '../locator.dart';
-import '../core/session_state.dart';
-import '../core/api/api_service.dart';
-import '../models/session_models.dart';
-import '../styles/colors.dart';
+import '../../../locator.dart';
+import '../../../core/session_state.dart';
+import '../../../core/api/api_service.dart';
+import '../../../models/session_models.dart';
+import '../../../styles/colors.dart';
 
 class TrendsScreen extends StatefulWidget {
   const TrendsScreen({super.key});
@@ -52,80 +52,73 @@ class _TrendsScreenState extends State<TrendsScreen> {
     }
   }
 
-  Map<String, dynamic> _calculateWeeklyStats() {
+  Map<String, dynamic> _calculateStats() {
     final now = DateTime.now();
+    // Calcular inicio de semana (Lunes)
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
-    final weekEnd = weekStart.add(const Duration(days: 6));
+    final start = DateTime(weekStart.year, weekStart.month, weekStart.day);
+    // Final de semana (Domingo al final del día)
+    final end = start
+        .add(const Duration(days: 7))
+        .subtract(const Duration(seconds: 1));
 
-    final weekSessions = _sessions.where((s) {
-      final localStartTime = s.startTime.toLocal();
-      final sessionDate = DateTime(
-        localStartTime.year,
-        localStartTime.month,
-        localStartTime.day,
-      );
-      return sessionDate.isAfter(weekStart.subtract(const Duration(days: 1))) &&
-          sessionDate.isBefore(weekEnd.add(const Duration(days: 1)));
+    final recentSessions = _sessions.where((s) {
+      final local = s.startTime.toLocal();
+      return local.isAfter(start.subtract(const Duration(seconds: 1))) &&
+          local.isBefore(end);
     }).toList();
 
-    final totalMinutes = weekSessions.fold<int>(
+    final totalMinutes = recentSessions.fold<int>(
       0,
       (sum, s) => sum + s.validMinutes,
     );
-    final totalAlerts = weekSessions.fold<int>(0, (sum, s) => sum + s.alerts);
-    final totalBonus = weekSessions.fold<int>(
+    final totalAlerts = recentSessions.fold<int>(0, (sum, s) => sum + s.alerts);
+    final totalBonus = recentSessions.fold<int>(
       0,
       (sum, s) => sum + s.bonusApplied,
     );
 
     return {
-      'sessions': weekSessions.length,
+      'sessions': recentSessions.length,
       'totalMinutes': totalMinutes,
       'totalAlerts': totalAlerts,
       'totalBonus': totalBonus,
-      'avgMinutes': weekSessions.isEmpty
-          ? 0
-          : totalMinutes ~/ weekSessions.length,
     };
   }
 
   int _calculateStreak() {
     if (_sessions.isEmpty) return 0;
 
-    final sortedSessions = List<SessionHistory>.from(_sessions)
-      ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    // 1. Agrupar fechas con actividad
+    final activeDates = <String>{};
+    for (var s in _sessions) {
+      final local = s.startTime.toLocal();
+      final dateStr = DateFormat('yyyy-MM-dd').format(local);
+      activeDates.add(dateStr);
+    }
 
+    // 2. Contar racha hacia atrás
     int streak = 0;
-    DateTime? lastDate;
+    var checkDate = DateTime.now();
 
-    for (final session in sortedSessions) {
-      final localStartTime = session.startTime.toLocal();
-      final sessionDate = DateTime(
-        localStartTime.year,
-        localStartTime.month,
-        localStartTime.day,
-      );
+    // Verificar si hoy tiene actividad
+    var dateStr = DateFormat('yyyy-MM-dd').format(checkDate);
 
-      if (lastDate == null) {
-        final today = DateTime.now();
-        final todayDate = DateTime(today.year, today.month, today.day);
-        final diff = todayDate.difference(sessionDate).inDays;
+    // Si hoy no tiene actividad, verificar ayer (para no romper la racha si aún no practico hoy)
+    if (!activeDates.contains(dateStr)) {
+      checkDate = checkDate.subtract(const Duration(days: 1));
+      dateStr = DateFormat('yyyy-MM-dd').format(checkDate);
 
-        if (diff == 0 || diff == 1) {
-          streak = 1;
-          lastDate = sessionDate;
-        } else {
-          break;
-        }
-      } else {
-        final diff = lastDate.difference(sessionDate).inDays;
-        if (diff == 1) {
-          streak++;
-          lastDate = sessionDate;
-        } else if (diff > 1) {
-          break;
-        }
+      if (!activeDates.contains(dateStr)) {
+        return 0; // Ni hoy ni ayer => racha 0
       }
+    }
+
+    // Contar días consecutivos hacia atrás
+    while (activeDates.contains(dateStr)) {
+      streak++;
+      checkDate = checkDate.subtract(const Duration(days: 1));
+      dateStr = DateFormat('yyyy-MM-dd').format(checkDate);
     }
 
     return streak;
@@ -133,18 +126,20 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
   List<Map<String, dynamic>> _getDailyData() {
     final now = DateTime.now();
+    // Inicio de semana (Lunes)
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
-    final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+
+    // Generar 7 días desde el lunes
+    final days = List.generate(7, (i) {
+      return weekStart.add(Duration(days: i));
+    });
 
     return days.map((day) {
+      final dayDate = DateTime(day.year, day.month, day.day);
+
       final daySessions = _sessions.where((s) {
-        final localStartTime = s.startTime.toLocal();
-        final sessionDate = DateTime(
-          localStartTime.year,
-          localStartTime.month,
-          localStartTime.day,
-        );
-        final dayDate = DateTime(day.year, day.month, day.day);
+        final local = s.startTime.toLocal();
+        final sessionDate = DateTime(local.year, local.month, local.day);
         return sessionDate == dayDate;
       }).toList();
 
@@ -159,7 +154,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final weeklyStats = _calculateWeeklyStats();
+    final weeklyStats = _calculateStats();
     final streak = _calculateStreak();
     final dailyData = _getDailyData();
     final maxMinutes = dailyData.isEmpty

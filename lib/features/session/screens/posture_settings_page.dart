@@ -5,9 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '/core/posture/posture_engine.dart';
 import '/features/posture/models/posture_reading.dart';
-import '../services/notification_service.dart';
-import '../styles/colors.dart';
-import '../widgets/custom_dialog.dart';
+import '../../../services/notification_service.dart';
+import '../../../styles/colors.dart';
+import '../../../widgets/custom_dialog.dart';
 
 class PostureSettingsPage extends StatefulWidget {
   const PostureSettingsPage({super.key});

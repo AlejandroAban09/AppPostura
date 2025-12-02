@@ -2,19 +2,20 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../locator.dart';
-import '../core/session_state.dart';
-import '../core/api/api_service.dart';
-import '../models/session_models.dart';
-import '../controllers/device_status_controller.dart';
-import '../widgets/qr_scanner_widget.dart';
-import '../widgets/custom_dialog.dart';
-import '../styles/colors.dart';
+import '../../../locator.dart';
+import '../../../core/session_state.dart';
+import '../../../core/api/api_service.dart';
+import '../../../models/session_models.dart';
+import '../../../controllers/device_status_controller.dart';
+import '../../../widgets/qr_scanner_widget.dart';
+import '../../../widgets/custom_dialog.dart';
+import '../../../styles/colors.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -53,13 +54,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadPoints() async {
+    final box = Hive.box('focusme_users');
     try {
       final saldo = await _api.getPoints(_sess.userId!);
       if (!mounted) return;
       setState(() => _points = saldo);
+      // Cache points
+      await box.put('cached_points_${_sess.userId}', saldo);
     } catch (e) {
       if (!mounted) return;
-      // Silencioso o log
+      // Load from cache if offline
+      final cached = box.get('cached_points_${_sess.userId}');
+      if (cached != null && cached is int) {
+        setState(() => _points = cached);
+      }
     }
   }
 
@@ -421,13 +429,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           );
                         },
                       ),
-                      
 
                       // 2. Start/Stop Button
                       _ActionCard(
                         title: running ? 'Finalizar' : 'Iniciar',
-                        subtitle:
-                            running ? 'Sesión en curso' : 'Comenzar ahora',
+                        subtitle: running
+                            ? 'Sesión en curso'
+                            : 'Comenzar ahora',
                         icon: running
                             ? Icons.stop_circle_outlined
                             : Icons.play_circle_outline,
@@ -446,7 +454,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
 
                       // 3. QR Scanner
-                      
                       _ActionCard(
                         title: 'Escanear QR',
                         subtitle: _sess.qrSsid != null
@@ -472,9 +479,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   //nuevo orden del grid, la columna 3 se concvierte en la 1, la 1 en la dos, la 2 en la 3 y la 4 en la 4
                   // nuevo grid orden
-
-
-
                 ],
               ),
             ),
@@ -615,10 +619,7 @@ class _DeviceStatusCard extends StatelessWidget {
   final DeviceStatusController deviceCtl;
   final VoidCallback? onTap;
 
-  const _DeviceStatusCard({
-    required this.deviceCtl,
-    this.onTap,
-  });
+  const _DeviceStatusCard({required this.deviceCtl, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -633,8 +634,9 @@ class _DeviceStatusCard extends StatelessWidget {
 
     final connected = deviceCtl.connected;
     final title = connected ? 'Conectado' : 'Desconectado';
-    final subtitle =
-        connected ? '${deviceCtl.deviceId ?? 'Dispositivo'}' : 'Sin dispositivo';
+    final subtitle = connected
+        ? '${deviceCtl.deviceId ?? 'Dispositivo'}'
+        : 'Sin dispositivo';
 
     final color = connected
         ? (isOut ? AppColors.errorColor : AppColors.successColor)

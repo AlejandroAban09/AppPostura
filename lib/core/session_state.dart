@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
 
 /// Estado global de sesión + cronómetro de postura.
 class SessionState extends ChangeNotifier {
@@ -28,6 +29,32 @@ class SessionState extends ChangeNotifier {
     userId = id;
     displayName = name;
     notifyListeners();
+  }
+
+  Future<void> restoreSession() async {
+    try {
+      if (!Hive.isBoxOpen('focusme_users')) {
+        await Hive.openBox('focusme_users');
+      }
+      final box = Hive.box('focusme_users');
+      final currentUser = box.get('current_user');
+
+      if (currentUser != null && currentUser is String) {
+        final userData = box.get(currentUser);
+        if (userData != null && userData is Map) {
+          final apiId = userData['api_user_id'] as int?;
+          // Si tenemos un ID de API guardado, restauramos la sesión
+          if (apiId != null) {
+            userId = apiId;
+            displayName =
+                currentUser; // O agregar display_name al mapa de usuario
+            notifyListeners();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error restoring session: $e');
+    }
   }
 
   void signOut() {

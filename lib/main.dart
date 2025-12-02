@@ -28,6 +28,7 @@ void main() async {
   await notificationService.requestPermissions();
 
   final session = locator<SessionState>();
+  await session.restoreSession();
   final router = createAppRouter(session);
 
   runApp(MyApp(router: router));
@@ -49,7 +50,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
-        title: 'FocusMe',
+        title: 'ErgoSense',
         theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
         routerConfig: router as dynamic,
       ),

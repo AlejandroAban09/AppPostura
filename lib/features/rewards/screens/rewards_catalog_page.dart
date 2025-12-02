@@ -6,10 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 
 import '/core/api/api_service.dart';
-import 'models/reward.dart';
-import '../../widgets/custom_dialog.dart';
-import '../../styles/colors.dart';
-import '../../core/session_state.dart';
+import '../models/reward.dart';
+import '../../../widgets/custom_dialog.dart';
+import '../../../styles/colors.dart';
+import '../../../core/session_state.dart';
 
 class RewardsCatalogPage extends StatefulWidget {
   const RewardsCatalogPage({super.key});

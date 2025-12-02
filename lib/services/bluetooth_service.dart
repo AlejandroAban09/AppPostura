@@ -74,9 +74,7 @@ class BluetoothService {
         });
   }
 
-  // ==========================
-  //  🌐 WEB BLUETOOTH REAL (SIN SIMULACIÓN, SOLO readValue)
-  // ==========================
+
 
   Future<void> _startWebBluetoothScan() async {
     debugPrint('🌐 [BT] Modo web: intentando Web Bluetooth real');
@@ -122,7 +120,7 @@ class BluetoothService {
       deviceStatus.setConnected(
         true,
         id: device.name ?? 'FocusCollar (web)',
-        mac: device.id ?? 'WEB',
+        mac: device.id //?? 'WEB',
       );
 
       // 4) Buscar servicio y characteristic

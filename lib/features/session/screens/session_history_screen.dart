@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../locator.dart';
-import '../core/session_state.dart';
-import '../core/api/api_service.dart';
-import '../models/session_models.dart';
-import '../styles/colors.dart';
+import '../../../locator.dart';
+import '../../../core/session_state.dart';
+import '../../../core/api/api_service.dart';
+import '../../../models/session_models.dart';
+import '../../../styles/colors.dart';
 
 class SessionHistoryScreen extends StatefulWidget {
   const SessionHistoryScreen({super.key});

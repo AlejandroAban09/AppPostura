@@ -2,16 +2,16 @@ import 'package:go_router/go_router.dart';
 
 import 'core/session_state.dart';
 
-import 'screens/splash_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
-import 'screens/forgot_password_screen.dart';
-import 'screens/dashboard_screen.dart';
+import 'features/auth/screens/splash_screen.dart';
+import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/register_screen.dart';
+import 'features/auth/screens/forgot_password_screen.dart';
+import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/device/devices_screen.dart';
-import 'features/rewards/rewards_catalog_page.dart';
-import 'screens/profile_screen.dart';
-import 'screens/home_shell.dart';
-import 'screens/metrics_screen.dart';
+import 'features/rewards/screens/rewards_catalog_page.dart';
+import 'features/settings/screens/profile_screen.dart';
+import 'features/dashboard/screens/home_shell.dart';
+import 'features/metrics/screens/metrics_screen.dart';
 
 GoRouter createAppRouter(SessionState session) {
   return GoRouter(

@@ -143,13 +143,12 @@ class SessionHistory {
 
   factory SessionHistory.fromJson(Map<String, dynamic> j) => SessionHistory(
     sessionId: (j['id_sesion'] ?? j['id'] ?? 0) as int,
-    startTime: DateTime.parse(
-      (j['start_time'] ??
-              j['created_at'] ??
-              j['date'] ??
-              DateTime.now().toIso8601String())
-          as String,
-    ),
+    startTime:
+        DateTime.tryParse(
+          (j['start_time'] ?? j['created_at'] ?? j['date'] ?? j['ts'] ?? '')
+              .toString(),
+        ) ??
+        DateTime(1970),
     endTime: j['end_time'] != null
         ? DateTime.parse(j['end_time'] as String)
         : null,
@@ -184,34 +183,32 @@ class RedeemHistory {
   });
 
   factory RedeemHistory.fromJson(Map<String, dynamic> j) => RedeemHistory(
-        // 👇 tu API usa id_redemption
-        redeemId: (j['id_redemption'] ?? j['id'] ?? 0) as int,
+    // 👇 tu API usa id_redemption
+    redeemId: (j['id_redemption'] ?? j['id'] ?? 0) as int,
 
-        // 👇 tu API usa created_at
-        timestamp: DateTime.parse(
-          (j['created_at'] ??
-                  j['ts'] ??
-                  j['date'] ??
-                  DateTime.now().toIso8601String())
-              as String,
-        ),
+    // 👇 tu API usa created_at
+    timestamp: DateTime.parse(
+      (j['created_at'] ??
+              j['ts'] ??
+              j['date'] ??
+              DateTime.now().toIso8601String())
+          as String,
+    ),
 
-        // De momento tu JSON no manda id de recompensa, lo dejamos en 0
-        rewardId: (j['reward_id'] ?? 0) as int,
+    // De momento tu JSON no manda id de recompensa, lo dejamos en 0
+    rewardId: (j['reward_id'] ?? 0) as int,
 
-        // 👇 tu API usa reward_name
-        rewardName:
-            (j['reward_name'] ?? j['nombre_recompensa']) as String? ??
-                'Recompensa',
+    // 👇 tu API usa reward_name
+    rewardName:
+        (j['reward_name'] ?? j['nombre_recompensa']) as String? ?? 'Recompensa',
 
-        // 👇 tu API usa cost_points
-        pointsSpent:
-            (j['cost_points'] ?? j['puntos_gastados'] ?? j['points'] ?? 0)
-                as int,
+    // 👇 tu API usa cost_points
+    pointsSpent:
+        (j['cost_points'] ?? j['puntos_gastados'] ?? j['points'] ?? 0) as int,
 
-        // Tu JSON actual no lleva estos, pero los dejamos preparados
-        sessionId: (j['id_sesion'] ?? j['session_id']) as int?,
-        bonusApplied: (j['bonus_aplicado'] ?? j['bonus'] ?? 0) as int,
-        tokenCode: (j['token_code'] ?? j['code']) as String?,
-      );
+    // Tu JSON actual no lleva estos, pero los dejamos preparados
+    sessionId: (j['id_sesion'] ?? j['session_id']) as int?,
+    bonusApplied: (j['bonus_aplicado'] ?? j['bonus'] ?? 0) as int,
+    tokenCode: (j['token_code'] ?? j['code']) as String?,
+  );
 }

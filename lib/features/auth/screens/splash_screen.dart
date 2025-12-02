@@ -1,9 +1,13 @@
 // lib/screens/splash_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-import '../locator.dart';
-import '../core/session_state.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+
+import '../../../locator.dart';
+import '../../../core/session_state.dart';
+import '../../../styles/colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,7 +21,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     // Navega tras una breve pausa para mostrar el logo
-    Future.delayed(const Duration(milliseconds: 800), () {
+    Future.delayed(const Duration(milliseconds: 2500), () {
       if (!context.mounted) return;
       final logged = locator<SessionState>().isLoggedIn;
       context.go(logged ? '/dashboard' : '/login');
@@ -28,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
         child: Column(
@@ -37,21 +41,32 @@ class _SplashScreenState extends State<SplashScreen> {
             // Ajusta la ruta del asset si es distinta
             // (recuerda declararlo en pubspec.yaml)
             SizedBox(
-              width: 120,
-              height: 120,
-              child: Image(
-                image: AssetImage('assets/imagenes/logo.png'),
-                fit: BoxFit.contain,
+              width: 260,
+              height: 260,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(25.0),
+                child: const Image(
+                  image: AssetImage('assets/imagenes/logo.png'),
+                  fit: BoxFit.contain,
+                ),
+
+                // image: AssetImage('assets/imagenes/logo.png'),
+                // fit: BoxFit.contain,
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
-              'FocusMe',
-              style: TextStyle(
+              'ErgoSense',
+              style: GoogleFonts.poppins(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
+            ),
+            const SizedBox(height: 48),
+            LoadingAnimationWidget.staggeredDotsWave(
+              color: AppColors.accentGold,
+              size: 50,
             ),
           ],
         ),

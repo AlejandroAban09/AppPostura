@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../locator.dart';
-import '../core/session_state.dart';
-import '../core/api/api_service.dart';
-import '../controllers/device_status_controller.dart';
-import '../styles/colors.dart';
-import 'session_history_screen.dart';
+import '../../../locator.dart';
+import '../../../core/session_state.dart';
+import '../../../core/api/api_service.dart';
+import '../../../controllers/device_status_controller.dart';
+import '../../../styles/colors.dart';
+import '../../session/screens/session_history_screen.dart';
 import 'trends_screen.dart';
-import 'redeem_history_screen.dart';
+import '../../rewards/screens/redeem_history_screen.dart';
 
 class MetricsScreen extends StatefulWidget {
   const MetricsScreen({super.key});
