@@ -22,7 +22,6 @@ class _DevicesScreenState extends State<DevicesScreen> {
   Future<void> _startScan(BuildContext context) async {
     final deviceCtl = context.read<DeviceStatusController>();
     final bt = BluetoothService();
-    
 
     // Adjuntar el controlador (importante para que reciba los ángulos)
     bt.attachDeviceController(deviceCtl);
@@ -73,299 +72,379 @@ class _DevicesScreenState extends State<DevicesScreen> {
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
         title: Text(
-          'Dispositivo',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          'Dispositivos',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primaryText,
+          ),
         ),
-        backgroundColor: AppColors.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.backgroundColor,
+        elevation: 0,
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 🟢 ELEMENTO PRINCIPAL: ÁNGULO ACTUAL
-            Card(
-              elevation: 8,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primaryColor.withOpacity(0.15),
-                      AppColors.secondaryColor.withOpacity(0.15),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+            // 🟢 ELEMENTO PRINCIPAL: ÁNGULO ACTUAL (Estilo Dashboard)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.cardDark,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Ángulo actual del cuello',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        color: AppColors.secondaryText,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'Ángulo del Cuello',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 14,
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${angle.toStringAsFixed(1)}°',
-                      style: GoogleFonts.poppins(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkGray,
-                      ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '${angle.toStringAsFixed(1)}°',
+                    style: GoogleFonts.poppins(
+                      fontSize: 56,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: postureColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: postureColor.withOpacity(0.5)),
+                    ),
+                    child: Text(
                       postureText,
                       style: GoogleFonts.poppins(
-                        fontSize: 18,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: postureColor,
+                        color:
+                            postureColor, // Usar color brillante para contraste
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Diferencia vs. referencia: ${delta.toStringAsFixed(1)}°',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.secondaryText,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _StatColumn(
+                        label: 'Referencia',
+                        value: '${base.toStringAsFixed(1)}°',
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Umbral: ${deviceCtl.thresholdDeg.toStringAsFixed(0)}°',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.secondaryText,
+                      _StatColumn(
+                        label: 'Diferencia',
+                        value: '${delta.toStringAsFixed(1)}°',
                       ),
-                    ),
-                  ],
-                ),
+                      _StatColumn(
+                        label: 'Umbral',
+                        value: '${deviceCtl.thresholdDeg.toStringAsFixed(0)}°',
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // Estado de conexión + info básica
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Icon(
-                      deviceCtl.connected
-                          ? Icons.bluetooth_connected
-                          : Icons.bluetooth_disabled,
-                      color: deviceCtl.connected
-                          ? AppColors.successColor
-                          : AppColors.warningColor,
-                      size: 32,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            deviceCtl.connected
-                                ? (deviceCtl.deviceId ?? 'Collar conectado')
-                                : 'Collar sin conectar',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.darkGray,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            deviceCtl.connected
-                                ? 'MAC: ${deviceCtl.deviceMac ?? '-'}'
-                                : 'Pulsa "Buscar y conectar" para enlazar tu collar',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: AppColors.secondaryText,
-                            ),
-                          ),
-                          if (deviceCtl.connected) ...[
-                            const SizedBox(height: 4),
+            // Estado de conexión
+            _SectionTitle(title: 'Estado de Conexión'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: deviceCtl.connected
+                              ? AppColors.successColor.withOpacity(0.1)
+                              : AppColors.warningColor.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          deviceCtl.connected
+                              ? Icons.bluetooth_connected
+                              : Icons.bluetooth_disabled,
+                          color: deviceCtl.connected
+                              ? AppColors.successColor
+                              : AppColors.warningColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              'Alertas en esta sesión: ${deviceCtl.alertCount}',
+                              deviceCtl.connected
+                                  ? (deviceCtl.deviceId ??
+                                        'Dispositivo Conectado')
+                                  : 'Desconectado',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryText,
+                              ),
+                            ),
+                            Text(
+                              deviceCtl.connected
+                                  ? 'MAC: ${deviceCtl.deviceMac ?? '-'}'
+                                  : 'Vincula tu dispositivo para comenzar',
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: AppColors.secondaryText,
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _scanning
+                              ? null
+                              : () => _startScan(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryText,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: _scanning
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  'Buscar',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: deviceCtl.connected
+                              ? () => _disconnect(context)
+                              : null,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.errorColor,
+                            side: const BorderSide(color: AppColors.errorColor),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Desconectar',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-
-            // Botones de conectar / desconectar
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _scanning
-                        ? null
-                        : () => _startScan(context),
-                    icon: _scanning
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.search),
-                    label: Text(
-                      _scanning ? 'Buscando...' : 'Buscar y conectar',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryText,
-                      foregroundColor: AppColors.backgroundColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed:
-                        deviceCtl.connected ? () => _disconnect(context) : null,
-                    icon: const Icon(Icons.link_off),
-                    label: const Text('Desconectar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.errorColor,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.lightGray,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
             const SizedBox(height: 24),
 
             // Calibración
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Calibración',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkGray,
-                      ),
+            _SectionTitle(title: 'Configuración'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Calibración de Postura',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryText,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      deviceCtl.baseNeckAngle == null
-                          ? 'Aún no calibrado. Siéntate derecho y pulsa "Calibrar ahora".'
-                          : 'Referencia actual: ${deviceCtl.baseNeckAngle!.toStringAsFixed(1)}°',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.secondaryText,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    deviceCtl.baseNeckAngle == null
+                        ? 'Siéntate derecho y calibra para establecer tu referencia.'
+                        : 'Referencia establecida en ${deviceCtl.baseNeckAngle!.toStringAsFixed(1)}°',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppColors.secondaryText,
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        ElevatedButton(
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
                           onPressed: deviceCtl.connected
                               ? deviceCtl.calibrateNow
                               : null,
-                          child: const Text('Calibrar ahora'),
-                        ),
-                        const SizedBox(width: 12),
-                        TextButton(
-                          onPressed: deviceCtl.baseNeckAngle != null
-                              ? deviceCtl.clearCalibration
-                              : null,
-                          child: const Text('Borrar calibración'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Umbral de sensibilidad
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Sensibilidad del umbral',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkGray,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'A partir de qué ángulo se considera "mala postura".',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.secondaryText,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Slider(
-                            min: 5,
-                            max: 45,
-                            divisions: 8,
-                            value: deviceCtl.thresholdDeg.clamp(5, 45),
-                            label:
-                                '${deviceCtl.thresholdDeg.toStringAsFixed(0)}°',
-                            onChanged: (v) => deviceCtl.setThreshold(v),
+                          icon: const Icon(Icons.accessibility_new, size: 18),
+                          label: const Text('Calibrar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentGold,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${deviceCtl.thresholdDeg.toStringAsFixed(0)}°',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
-                          ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (deviceCtl.baseNeckAngle != null)
+                        IconButton(
+                          onPressed: deviceCtl.clearCalibration,
+                          icon: const Icon(Icons.refresh),
+                          color: AppColors.secondaryText,
+                          tooltip: 'Resetear',
                         ),
-                      ],
+                    ],
+                  ),
+                  const Divider(height: 32),
+                  Text(
+                    'Sensibilidad (${deviceCtl.thresholdDeg.toStringAsFixed(0)}°)',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryText,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 8),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: AppColors.primaryColor,
+                      inactiveTrackColor: AppColors.lightGray,
+                      thumbColor: AppColors.primaryColor,
+                      overlayColor: AppColors.primaryColor.withOpacity(0.2),
+                    ),
+                    child: Slider(
+                      min: 5,
+                      max: 45,
+                      divisions: 8,
+                      value: deviceCtl.thresholdDeg.clamp(5, 45),
+                      label: '${deviceCtl.thresholdDeg.toStringAsFixed(0)}°',
+                      onChanged: (v) => deviceCtl.setThreshold(v),
+                    ),
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: 80), // Espacio para el bottom nav
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _StatColumn extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _StatColumn({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+
+  const _SectionTitle({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: GoogleFonts.poppins(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: AppColors.primaryText,
       ),
     );
   }

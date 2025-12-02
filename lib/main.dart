@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'locator.dart';
 import 'core/session_state.dart';
@@ -28,6 +29,17 @@ void main() async {
   await notificationService.requestPermissions();
 
   final session = locator<SessionState>();
+
+  // Verificar si es la primera vez que se ejecuta la app
+  final prefs = await SharedPreferences.getInstance();
+  final isFirstRun = prefs.getBool('is_first_run') ?? true;
+
+  if (isFirstRun) {
+    // Si es la primera vez, limpiamos cualquier dato previo (por si acaso)
+    await Hive.box('focusme_users').clear();
+    await prefs.setBool('is_first_run', false);
+  }
+
   await session.restoreSession();
   final router = createAppRouter(session);
 
@@ -42,7 +54,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // 👇 Este provider es el que te falta
+        // Este provider es el que te falta
         ChangeNotifierProvider<DeviceStatusController>(
           create: (_) => DeviceStatusController(),
         ),
