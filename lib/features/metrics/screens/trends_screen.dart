@@ -37,7 +37,13 @@ class _TrendsScreenState extends State<TrendsScreen> {
     });
 
     try {
-      final sessions = await _api.getSessionHistory(_sess.userId!, limit: 100);
+      // Pedimos más historial para asegurar que lleguen los recientes
+      // si la API los manda en orden ascendente.
+      final sessions = await _api.getSessionHistory(_sess.userId!, limit: 1000);
+
+      // Ordenamos descendente por fecha (más reciente primero)
+      sessions.sort((a, b) => b.startTime.compareTo(a.startTime));
+
       if (!mounted) return;
       setState(() {
         _sessions = sessions;
