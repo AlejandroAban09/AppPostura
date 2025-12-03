@@ -223,8 +223,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error inesperado: ${e.toString()}'),
+          content: Text(
+            'Error inesperado: ${e.toString().replaceAll('Exception:', '').trim()}',
+          ),
           backgroundColor: AppColors.errorColor,
+          duration: const Duration(seconds: 4),
         ),
       );
     } finally {

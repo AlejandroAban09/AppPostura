@@ -49,10 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await box.put('current_user', username);
 
       // 🔹 3) Guardar sesión global con el id REAL de la API
-      locator<SessionState>().signIn(
-        id: res.userId,
-        name: res.displayName,
-      );
+      locator<SessionState>().signIn(id: res.userId, name: res.displayName);
 
       if (!context.mounted) return;
       context.go('/dashboard');
@@ -62,8 +59,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Usuario o contraseña incorrectos'),
+          content: Text(
+            'Error: ${e.toString().replaceAll('Exception:', '').trim()}',
+          ),
           backgroundColor: AppColors.errorColor,
+          duration: const Duration(seconds: 4),
         ),
       );
     } finally {
