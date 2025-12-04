@@ -40,8 +40,6 @@
 |-----------|------------|--------------|
 | ![Dashboard](assets/imagenes/screen_dashboard.jpg) | ![Tendencias](assets/imagenes/screen_tendencias.jpg) | ![Dispositivos](assets/imagenes/screen_dispositivos.jpg) |
 
-*(Nota: Reemplaza estas rutas con capturas reales de tu app)*
-
 ---
 
 ## 🔧 Instalación y Configuración
