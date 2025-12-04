@@ -1,6 +1,6 @@
-# FocusMe App 🧘‍♂️📱
+# ErgoSense App 🧘‍♂️📱
 
-**FocusMe** es una aplicación móvil desarrollada en Flutter diseñada para mejorar tu postura y concentración. Se conecta vía Bluetooth a un dispositivo "wearable" (ESP32) que monitorea la inclinación de tu cuello en tiempo real, ayudándote a prevenir dolores y mantener hábitos saludables mediante gamificación.
+**ErgoSense** es una aplicación móvil desarrollada en Flutter diseñada para mejorar tu postura y concentración. Se conecta vía Bluetooth a un dispositivo "wearable" (ESP32) que monitorea la inclinación de tu cuello en tiempo real, ayudándote a prevenir dolores y mantener hábitos saludables mediante gamificación.
 
 ---
 
