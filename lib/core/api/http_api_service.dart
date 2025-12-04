@@ -275,59 +275,44 @@ class HttpApiService implements ApiService {
     return RedeemResult.fromJson(j);
   }
 
-  // Historial de sesiones
+    // ========== HISTORIAL DE SESIONES ==========
   @override
   Future<List<SessionHistory>> getSessionHistory(
     int userId, {
     int limit = 50,
   }) async {
-    List<String> endpoints = [
-      '/users/$userId/sessions',
-      '/sessions',
-      '/sessions/history',
-      '/users/$userId/history',
-    ];
+    // Tu API real: GET /sessions?user=ID&limit=N
+    final r = await _client
+        .get(
+          _u('/sessions', {
+            'user': '$userId',
+            'limit': '$limit',
+          }),
+        )
+        .timeout(AppConfig.timeout);
 
-    for (String endpoint in endpoints) {
-      try {
-        final Map<String, String> params = {'limit': '$limit'};
-        if (!endpoint.contains('/users/')) {
-          params['id_usuario'] = userId.toString();
-          params['user_id'] = userId.toString();
-          params['user'] = userId.toString();
-        }
+    final j = await _jsonOrError(r);
 
-        final r = await _client
-            .get(_u(endpoint, params))
-            .timeout(AppConfig.timeout);
+    // _jsonOrError siempre devuelve un Map:
+    // - Si la respuesta es una LISTA, la envuelve como {'data': [...]}
+    // - Si es un objeto, la deja tal cual
+    List rawList = const [];
 
-        if (r.statusCode == 404 || r.statusCode == 422) {
-          continue;
-        }
-
-        final j = await _jsonOrError(r);
-        final List rawList;
-        if (j['items'] != null && j['items'] is List) {
-          rawList = j['items'];
-        } else if (j['data'] != null && j['data'] is List) {
-          rawList = j['data'];
-        } else {
-          rawList = [];
-        }
-
-        return rawList
-            .map((e) => SessionHistory.fromJson(e as Map<String, dynamic>))
-            .toList();
-      } catch (e) {
-        final msg = e.toString();
-        if (msg.contains('404') || msg.contains('422')) {
-          continue;
-        }
-        rethrow;
-      }
+    if (j['items'] is List) {
+      rawList = j['items'] as List;
+    } else if (j['data'] is List) {
+      rawList = j['data'] as List;
+    } else if (j['sessions'] is List) {
+      rawList = j['sessions'] as List;
+    } else if (j is Map && j.isEmpty) {
+      rawList = const [];
     }
-    return [];
+
+    return rawList
+        .map((e) => SessionHistory.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
+
 
   // Historial de canjes (endpoint real)
   @override

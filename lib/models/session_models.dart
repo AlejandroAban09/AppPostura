@@ -141,24 +141,65 @@ class SessionHistory {
     this.deviceName,
   });
 
-  factory SessionHistory.fromJson(Map<String, dynamic> j) => SessionHistory(
-    sessionId: (j['id_sesion'] ?? j['id'] ?? 0) as int,
-    startTime:
-        DateTime.tryParse(
-          (j['start_time'] ?? j['created_at'] ?? j['date'] ?? j['ts'] ?? '')
-              .toString(),
-        ) ??
-        DateTime(1970),
-    endTime: j['end_time'] != null
-        ? DateTime.parse(j['end_time'] as String)
-        : null,
-    validMinutes: (j['valid_minutes'] ?? j['minutes'] ?? 0) as int,
-    alerts: (j['alerts'] ?? 0) as int,
-    bonusApplied: (j['bonus_applied'] ?? j['bonus'] ?? 0) as int,
-    ssid: j['ssid'] as String?,
-    deviceName: (j['device_name'] ?? j['device']) as String?,
-  );
+  factory SessionHistory.fromJson(Map<String, dynamic> j) {
+    // 1) Buscar el campo de fecha en varias claves conocidas
+    String? _findDateField() {
+      const keys = [
+        'start_time',
+        'created_at',
+        'date',
+        'ts',
+        'timestamp',
+        'fecha',
+      ];
+
+      for (final k in keys) {
+        final v = j[k];
+        if (v is String && v.isNotEmpty) return v;
+      }
+
+      // 2) Si no está en esas claves, buscar cualquier valor String
+      // que parezca una fecha ISO: 2025-12-04T...
+      final isoRegex = RegExp(r'^\d{4}-\d{2}-\d{2}T');
+      for (final v in j.values) {
+        if (v is String && isoRegex.hasMatch(v)) {
+          return v;
+        }
+      }
+
+      return null;
+    }
+
+    final startStr = _findDateField();
+    final endStr = j['end_time'] as String?;
+
+    DateTime _parseOrEpoch(String? s) {
+      if (s == null) {
+        // epoch (1970) -> si sigues viendo 1969/1970 es que el backend REALMENTE
+        // está mandando 1970-01-01..., ahí habría que corregir el backend.
+        return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true).toLocal();
+      }
+      try {
+        return DateTime.parse(s).toLocal();
+      } catch (_) {
+        return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true).toLocal();
+      }
+    }
+
+    return SessionHistory(
+      sessionId: (j['id_sesion'] ?? j['id'] ?? j['session_id'] ?? 0) as int,
+      startTime: _parseOrEpoch(startStr),
+      endTime: endStr != null ? _parseOrEpoch(endStr) : null,
+      validMinutes: (j['valid_minutes'] ?? j['minutes'] ?? 0) as int,
+      alerts: (j['alerts'] ?? 0) as int,
+      bonusApplied: (j['bonus_applied'] ?? j['bonus'] ?? 0) as int,
+      ssid: j['ssid'] as String?,
+      deviceName: (j['device_name'] ?? j['device']) as String?,
+    );
+  }
 }
+
+
 
 /// Historial de canjes
 class RedeemHistory {
