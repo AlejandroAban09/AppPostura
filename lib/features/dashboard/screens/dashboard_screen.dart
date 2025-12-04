@@ -207,6 +207,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _sess.setSessionId(null);
       if (ssidToSend != null) _sess.clearQrBonus();
 
+      // Resetear alertas en el controlador para que no se queden en el dashboard
+      deviceCtl.resetAlerts();
+
       if (!mounted) return;
       setState(() => _points = resp.saldo);
 

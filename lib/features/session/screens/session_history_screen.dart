@@ -36,6 +36,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       final list = await _api.getSessionHistory(_sess.userId!);
       if (mounted) {
         setState(() {
+          // Ordenar por fecha descendente (más reciente primero)
+          list.sort((a, b) => b.startTime.compareTo(a.startTime));
           _history = list;
           _loading = false;
         });
