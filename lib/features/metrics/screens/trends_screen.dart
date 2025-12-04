@@ -23,6 +23,7 @@ class _TrendsScreenState extends State<TrendsScreen> {
   List<SessionHistory> _sessions = [];
   bool _loading = false;
   String? _error;
+  int _weekOffset = 0; // 0 = esta semana, 1 = semana pasada, etc.
 
   @override
   void initState() {
@@ -60,8 +61,13 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
   Map<String, dynamic> _calculateStats() {
     final now = DateTime.now();
-    // Calcular inicio de semana (Lunes)
-    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    // Calcular inicio de la semana actual (Lunes)
+    final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
+    // Aplicar offset
+    final weekStart = currentWeekStart.subtract(
+      Duration(days: 7 * _weekOffset),
+    );
+
     final start = DateTime(weekStart.year, weekStart.month, weekStart.day);
     // Final de semana (Domingo al final del día)
     final end = start
@@ -132,8 +138,12 @@ class _TrendsScreenState extends State<TrendsScreen> {
 
   List<Map<String, dynamic>> _getDailyData() {
     final now = DateTime.now();
-    // Inicio de semana (Lunes)
-    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    // Inicio de semana actual (Lunes)
+    final currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
+    // Aplicar offset
+    final weekStart = currentWeekStart.subtract(
+      Duration(days: 7 * _weekOffset),
+    );
 
     // Generar 7 días desde el lunes
     final days = List.generate(7, (i) {
@@ -295,13 +305,44 @@ class _TrendsScreenState extends State<TrendsScreen> {
                       const SizedBox(height: 32),
 
                       // Weekly Stats
-                      Text(
-                        'Esta Semana',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryText,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _weekOffset == 0
+                                ? 'Esta Semana'
+                                : 'Semana Anterior',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryText,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.chevron_left),
+                                onPressed: () {
+                                  setState(() {
+                                    _weekOffset++;
+                                  });
+                                },
+                                tooltip: 'Semana anterior',
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.chevron_right),
+                                onPressed: _weekOffset == 0
+                                    ? null
+                                    : () {
+                                        setState(() {
+                                          _weekOffset--;
+                                        });
+                                      },
+                                tooltip: 'Semana siguiente',
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Row(
