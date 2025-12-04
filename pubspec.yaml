@@ -72,8 +72,8 @@ flutter:
     - assets/imagenes/Owlight.jpg
     - assets/imagenes/FocusBear.jpg
     - assets/imagenes/screen_dashboard.jpg
-    - assets/imagenes/screen_trends.jpg
-    - assets/imagenes/screen_devices.jpg
+    - assets/imagenes/screen_tendencias.jpg
+    - assets/imagenes/screen_dispositivos.jpg
 
 # Configuración de iconos de la app
 flutter_launcher_icons:
