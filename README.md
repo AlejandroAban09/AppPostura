@@ -38,7 +38,7 @@
 
 | Dashboard | Tendencias | Dispositivos |
 |-----------|------------|--------------|
-| ![Dashboard](assets/imagenes/app_icon.png) | ![Tendencias](assets/imagenes/app_icon.png) | ![Dispositivos](assets/imagenes/app_icon.png) |
+| ![Dashboard](assets/imagenes/screen_dashboard.jpg) | ![Tendencias](assets/imagenes/screen_trends.jpg) | ![Dispositivos](assets/imagenes/screen_devices.jpg) |
 
 *(Nota: Reemplaza estas rutas con capturas reales de tu app)*
 
