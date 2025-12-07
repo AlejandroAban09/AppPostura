@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 import '/locator.dart';
 import '/core/api/api_service.dart';
 import '/styles/colors.dart';
+import '/widgets/custom_dialog.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -86,11 +88,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (username.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('El nombre de usuario no puede estar vacío'),
-            backgroundColor: AppColors.errorColor,
-          ),
+        CustomDialog.show(
+          context: context,
+          title: 'Error',
+          message: 'El nombre de usuario no puede estar vacío',
+          color: AppColors.errorColor,
+          icon: Icons.error_outline,
         );
         return;
       }
@@ -126,22 +129,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
             // Si ya existe en el servidor, verificar localmente
             if (box.containsKey(username)) {
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('El nombre de usuario ya existe'),
-                  backgroundColor: AppColors.errorColor,
-                ),
+              CustomDialog.show(
+                context: context,
+                title: 'Error',
+                message: 'El nombre de usuario ya existe',
+                color: AppColors.errorColor,
+                icon: Icons.error_outline,
               );
               return;
             }
             // Si no existe localmente pero sí en el servidor, no continuar
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errorMessage),
-                backgroundColor: AppColors.errorColor,
-                duration: const Duration(seconds: 4),
-              ),
+            CustomDialog.show(
+              context: context,
+              title: 'Error de Registro',
+              message: errorMessage,
+              color: AppColors.errorColor,
+              icon: Icons.error_outline,
             );
             return;
           } else if (apiError.toString().contains('400') ||
@@ -154,8 +158,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               apiError.toString().toLowerCase().contains('server')) {
             errorMessage = 'Error del servidor. Por favor intenta más tarde';
           } else {
-            errorMessage =
-                'Error al conectar con el servidor: ${apiError.toString()}';
+            errorMessage = 'Error de conexión con el servidor.';
           }
 
           // Si hay un error de conexión (no 404), guardar localmente de todas formas
@@ -163,12 +166,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           if (!apiError.toString().contains('404') &&
               !apiError.toString().contains('no está disponible')) {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('$errorMessage. Se guardará localmente.'),
-                backgroundColor: AppColors.warningColor,
-                duration: const Duration(seconds: 4),
-              ),
+            CustomDialog.show(
+              context: context,
+              title: 'Advertencia',
+              message: '$errorMessage. Se guardará localmente.',
+              color: AppColors.warningColor,
+              icon: Icons.warning_amber_rounded,
             );
           }
         }
@@ -177,11 +180,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // CAMBIO: Verificar si el usuario ya existe localmente (solo si no se registró en API)
       if (!apiRegistrationSuccess && box.containsKey(username)) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('El nombre de usuario ya existe localmente'),
-            backgroundColor: AppColors.errorColor,
-          ),
+        CustomDialog.show(
+          context: context,
+          title: 'Error',
+          message: 'El nombre de usuario ya existe localmente',
+          color: AppColors.errorColor,
+          icon: Icons.error_outline,
         );
         return;
       }
@@ -203,32 +207,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       // Mostrar mensaje de éxito
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            apiRegistrationSuccess
-                ? '¡Cuenta creada exitosamente en el servidor!'
-                : '¡Cuenta creada exitosamente! (Solo local)',
-          ),
-          backgroundColor: AppColors.successColor,
-        ),
+      await CustomDialog.show(
+        context: context,
+        title: '¡Registro Exitoso!',
+        message: apiRegistrationSuccess
+            ? 'Tu cuenta ha sido creada exitosamente en el servidor.'
+            : 'Tu cuenta ha sido creada exitosamente (Solo local).',
+        color: AppColors.successColor,
+        icon: Icons.check_circle_outline,
       );
-
-      // Limpiar los campos después de un breve delay
-      await Future.delayed(const Duration(milliseconds: 500));
 
       if (!mounted) return;
       context.go('/login');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error inesperado: ${e.toString().replaceAll('Exception:', '').trim()}',
-          ),
-          backgroundColor: AppColors.errorColor,
-          duration: const Duration(seconds: 4),
-        ),
+      CustomDialog.show(
+        context: context,
+        title: 'Error Inesperado',
+        message: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
+        color: AppColors.errorColor,
+        icon: Icons.error_outline,
       );
     } finally {
       if (mounted) {
@@ -252,374 +250,377 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(title: const Text('Crear Cuenta')),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(25.0),
-                  child: Image.asset(
-                    'assets/imagenes/logo.png',
-                    width: 170,
-                    height: 170,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.account_circle,
-                        size: 170,
-                        color: AppColors.primaryColor,
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Únete a la comunidad',
-                  style: GoogleFonts.poppins(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkGray,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                Card(
-                  color: AppColors.backgroundColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15.0),
-                    side: const BorderSide(color: AppColors.lightGray),
-                  ),
-                  elevation: 15,
-                  child: Padding(
-                    padding: const EdgeInsets.all(14.0),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          TextFormField(
-                            controller: _displayNameController,
-                            validator: _validateDisplayName,
-                            decoration: InputDecoration(
-                              labelText: 'Nombre Completo',
-                              labelStyle: GoogleFonts.poppins(
-                                color: AppColors.darkGray,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.backgroundColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.primaryColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.badge_outlined,
-                                color: AppColors.primaryColor,
-                              ),
-                              filled: true,
-                              fillColor: AppColors.lightGray,
-                            ),
-                            keyboardType: TextInputType.name,
-                            textInputAction: TextInputAction.next,
-                          ),
-                          const SizedBox(height: 20),
-                          TextFormField(
-                            controller: _emailController,
-                            validator: _validateEmail,
-                            decoration: InputDecoration(
-                              labelText: 'Correo Electrónico',
-                              labelStyle: GoogleFonts.poppins(
-                                color: AppColors.darkGray,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.backgroundColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.primaryColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.email_outlined,
-                                color: AppColors.primaryColor,
-                              ),
-                              filled: true,
-                              fillColor: AppColors.lightGray,
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                          ),
-                          const SizedBox(height: 20),
-                          TextFormField(
-                            controller: _usernameController,
-                            validator: _validateUsername,
-                            decoration: InputDecoration(
-                              labelText: 'Nombre de usuario',
-                              labelStyle: GoogleFonts.poppins(
-                                color: AppColors.darkGray,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.backgroundColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.primaryColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.person_outlined,
-                                color: AppColors.primaryColor,
-                              ),
-                              filled: true,
-                              fillColor: AppColors.lightGray,
-                            ),
-                            keyboardType: TextInputType.text,
-                            textInputAction: TextInputAction.next,
-                          ),
-                          const SizedBox(height: 20),
-                          TextFormField(
-                            controller: _passwordController,
-                            validator: _validatePassword,
-                            obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              labelText: 'Contraseña',
-                              labelStyle: GoogleFonts.poppins(
-                                color: AppColors.darkGray,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.backgroundColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.primaryColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.password_outlined,
-                                color: AppColors.primaryText,
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                  color: AppColors.primaryText,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                              filled: true,
-                              fillColor: AppColors.lightGray,
-                              helperText: 'Mínimo 6 caracteres',
-                              helperStyle: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: AppColors.secondaryText,
-                              ),
-                            ),
-                            textInputAction: TextInputAction.next,
-                          ),
-                          const SizedBox(height: 20),
-                          TextFormField(
-                            controller: _confirmPasswordController,
-                            validator: _validateConfirmPassword,
-                            obscureText: _obscureConfirmPassword,
-                            decoration: InputDecoration(
-                              labelText: 'Confirmar Contraseña',
-                              labelStyle: GoogleFonts.poppins(
-                                color: AppColors.darkGray,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.backgroundColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.primaryColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              focusedErrorBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(
-                                  color: AppColors.errorColor,
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              prefixIcon: const Icon(
-                                Icons.password_outlined,
-                                color: AppColors.primaryText,
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscureConfirmPassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                  color: AppColors.primaryText,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscureConfirmPassword =
-                                        !_obscureConfirmPassword;
-                                  });
-                                },
-                              ),
-                              filled: true,
-                              fillColor: AppColors.lightGray,
-                            ),
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) => _register(),
-                          ),
-                          const SizedBox(height: 40),
-                          ElevatedButton(
-                            onPressed: _isLoading ? null : _register,
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 50),
-                              backgroundColor: AppColors.primaryText,
-                              foregroundColor: AppColors.backgroundColor,
-                              disabledBackgroundColor: AppColors.lightGray,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 10,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                                side: const BorderSide(
-                                  color: AppColors.primaryColor,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.backgroundColor,
-                                      ),
-                                    ),
-                                  )
-                                : const Text('Registrarse'),
-                          ),
-                          TextButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () => context.go('/login'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.primaryText,
-                              backgroundColor: Colors.transparent,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                            child: const Text('Ya tengo una cuenta'),
-                          ),
-                        ],
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(25.0),
+                      child: Image.asset(
+                        'assets/imagenes/logo.png',
+                        width: 170,
+                        height: 170,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.account_circle,
+                            size: 170,
+                            color: AppColors.primaryColor,
+                          );
+                        },
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Únete a la comunidad',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkGray,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    Card(
+                      color: AppColors.backgroundColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15.0),
+                        side: const BorderSide(color: AppColors.lightGray),
+                      ),
+                      elevation: 15,
+                      child: Padding(
+                        padding: const EdgeInsets.all(14.0),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              TextFormField(
+                                controller: _displayNameController,
+                                validator: _validateDisplayName,
+                                decoration: InputDecoration(
+                                  labelText: 'Nombre Completo',
+                                  labelStyle: GoogleFonts.poppins(
+                                    color: AppColors.darkGray,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.backgroundColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primaryColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.badge_outlined,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.lightGray,
+                                ),
+                                keyboardType: TextInputType.name,
+                                textInputAction: TextInputAction.next,
+                              ),
+                              const SizedBox(height: 20),
+                              TextFormField(
+                                controller: _emailController,
+                                validator: _validateEmail,
+                                decoration: InputDecoration(
+                                  labelText: 'Correo Electrónico',
+                                  labelStyle: GoogleFonts.poppins(
+                                    color: AppColors.darkGray,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.backgroundColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primaryColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.email_outlined,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.lightGray,
+                                ),
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                              ),
+                              const SizedBox(height: 20),
+                              TextFormField(
+                                controller: _usernameController,
+                                validator: _validateUsername,
+                                decoration: InputDecoration(
+                                  labelText: 'Nombre de usuario',
+                                  labelStyle: GoogleFonts.poppins(
+                                    color: AppColors.darkGray,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.backgroundColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primaryColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.person_outlined,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.lightGray,
+                                ),
+                                keyboardType: TextInputType.text,
+                                textInputAction: TextInputAction.next,
+                              ),
+                              const SizedBox(height: 20),
+                              TextFormField(
+                                controller: _passwordController,
+                                validator: _validatePassword,
+                                obscureText: _obscurePassword,
+                                decoration: InputDecoration(
+                                  labelText: 'Contraseña',
+                                  labelStyle: GoogleFonts.poppins(
+                                    color: AppColors.darkGray,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.backgroundColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primaryColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.password_outlined,
+                                    color: AppColors.primaryText,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                      color: AppColors.primaryText,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.lightGray,
+                                  helperText: 'Mínimo 6 caracteres',
+                                  helperStyle: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: AppColors.secondaryText,
+                                  ),
+                                ),
+                                textInputAction: TextInputAction.next,
+                              ),
+                              const SizedBox(height: 20),
+                              TextFormField(
+                                controller: _confirmPasswordController,
+                                validator: _validateConfirmPassword,
+                                obscureText: _obscureConfirmPassword,
+                                decoration: InputDecoration(
+                                  labelText: 'Confirmar Contraseña',
+                                  labelStyle: GoogleFonts.poppins(
+                                    color: AppColors.darkGray,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.backgroundColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primaryColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderSide: const BorderSide(
+                                      color: AppColors.errorColor,
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.password_outlined,
+                                    color: AppColors.primaryText,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirmPassword
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                      color: AppColors.primaryText,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureConfirmPassword =
+                                            !_obscureConfirmPassword;
+                                      });
+                                    },
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.lightGray,
+                                ),
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => _register(),
+                              ),
+                              const SizedBox(height: 40),
+                              ElevatedButton(
+                                onPressed: _isLoading ? null : _register,
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: const Size(double.infinity, 50),
+                                  backgroundColor: AppColors.primaryText,
+                                  foregroundColor: AppColors.backgroundColor,
+                                  disabledBackgroundColor: AppColors.lightGray,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.0),
+                                    side: const BorderSide(
+                                      color: AppColors.primaryColor,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                child: const Text('Registrarse'),
+                              ),
+                              TextButton(
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => context.go('/login'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.primaryText,
+                                  backgroundColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                ),
+                                child: const Text('Ya tengo una cuenta'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: Center(
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                  color: AppColors.accentGold,
+                  size: 50,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

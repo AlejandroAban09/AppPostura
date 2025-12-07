@@ -1,3 +1,5 @@
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+
 // lib/features/device/devices_screen.dart
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -249,15 +251,14 @@ class _DevicesScreenState extends State<DevicesScreen> {
                             elevation: 0,
                           ),
                           child: _scanning
-                              ? const SizedBox(
+                              ? SizedBox(
                                   height: 20,
                                   width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(
-                                      Colors.white,
-                                    ),
-                                  ),
+                                  child:
+                                      LoadingAnimationWidget.staggeredDotsWave(
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                 )
                               : Text(
                                   'Buscar',

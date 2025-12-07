@@ -9,6 +9,7 @@ import 'locator.dart';
 import 'core/session_state.dart';
 import 'controllers/device_status_controller.dart';
 import 'services/notification_service.dart';
+import 'services/storage_service.dart';
 import 'app.dart';
 
 void main() async {
@@ -20,6 +21,9 @@ void main() async {
   await Hive.openBox('focusme_users');
   // CAMBIO: Inicializar box para códigos de recuperación de contraseña
   await Hive.openBox('password_reset_codes');
+
+  // Inicializar StorageService para caché
+  await StorageService().init();
 
   setupLocator();
 

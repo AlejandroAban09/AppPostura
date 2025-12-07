@@ -13,6 +13,7 @@ import '../../../core/session_state.dart';
 import '../../../core/api/api_service.dart';
 import '../../../models/session_models.dart';
 import '../../../controllers/device_status_controller.dart';
+import '../../../services/storage_service.dart';
 import '../../../widgets/qr_scanner_widget.dart';
 import '../../../widgets/custom_dialog.dart';
 import '../../../styles/colors.dart';
@@ -36,6 +37,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadPoints();
+    _trySync();
+  }
+
+  Future<void> _trySync() async {
+    // Intentar sincronizar sesiones pendientes en segundo plano
+    try {
+      final count = await StorageService().syncPendingSessions();
+      if (count > 0 && mounted) {
+        _showPopup(
+          'Sincronización Completada',
+          'Se han subido $count sesiones pendientes.',
+          color: AppColors.successColor,
+          icon: Icons.cloud_upload,
+        );
+        _loadPoints(); // Recargar puntos actualizados
+      }
+    } catch (_) {
+      // Silencioso si falla (probablemente sigue offline)
+    }
   }
 
   void _showPopup(
@@ -111,7 +131,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      _showPopup('Error', 'Error al iniciar: $e', color: AppColors.errorColor);
+
+      // Si falla la conexión, ofrecer modo offline
+      final startOffline = await CustomDialog.show<bool>(
+        context: context,
+        title: 'Sin conexión',
+        message:
+            'No se pudo conectar con el servidor.\n¿Deseas iniciar una sesión de práctica offline? (Los datos no se guardarán en tu historial)',
+        color: AppColors.warningColor,
+        icon: Icons.wifi_off_rounded,
+        actions: [
+          Expanded(
+            child: TextButton(
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(false),
+              child: Text(
+                'Cancelar',
+                style: GoogleFonts.poppins(color: AppColors.secondaryText),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.cardDark,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Iniciar Offline',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      );
+
+      if (startOffline == true) {
+        _sess.setSessionId(null); // Sin ID de servidor
+        _sess.startSessionTimer();
+        if (!mounted) return;
+        _showPopup(
+          'Sesión Offline',
+          'Sesión de práctica iniciada.\nRecuerda que estos datos no se guardarán.',
+          color: AppColors.warningColor,
+          icon: Icons.wifi_off_rounded,
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -165,8 +236,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _finishSession(DeviceStatusController deviceCtl) async {
-    final sessionId = _sess.currentSessionId;
-    if (sessionId == null) {
+    // Verificar si hay sesión corriendo (independientemente de si tiene ID o no)
+    if (!_sess.isSessionRunning) {
       _showPopup(
         'Atención',
         'No hay sesión activa.',
@@ -174,9 +245,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
       return;
     }
+
+    final sessionId = _sess.currentSessionId;
+    final alerts = deviceCtl.alertCount;
+    final minutes = _sess.stopSessionTimer();
+
+    // Si es sesión offline (sessionId == null)
+    if (sessionId == null) {
+      deviceCtl.resetAlerts();
+
+      // Guardar sesión pendiente para sincronizar después
+      final pending = PendingSession(
+        start: SessionStart(
+          userId: _sess.userId!,
+          deviceName: deviceCtl.deviceId ?? 'Offline Device',
+          deviceMac: deviceCtl.deviceMac ?? '00:00:00:00:00:00',
+        ),
+        finish: SessionFinish(
+          validMinutes: minutes,
+          alerts: alerts,
+          ssid: _sess
+              .qrSsid, // Guardamos el SSID si había uno, aunque puede expirar
+        ),
+        timestamp: DateTime.now(),
+      );
+
+      await StorageService().addPendingSession(pending);
+      if (_sess.qrSsid != null) _sess.clearQrBonus();
+
+      _showPopup(
+        'Sesión Guardada Offline',
+        'Tiempo: $minutes min\nAlertas: $alerts\n\nTu sesión se ha guardado en el dispositivo y se sincronizará cuando recuperes la conexión.',
+        color: AppColors.warningColor,
+        icon: Icons.save_alt,
+      );
+      return;
+    }
+
     setState(() => _loading = true);
     try {
-      final minutes = _sess.stopSessionTimer();
       // Si la sesión no era válida (sin dispositivo), enviamos 0 minutos
       final validMinutes = _sess.isSessionValidForPoints ? minutes : 0;
 
@@ -194,7 +301,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
 
-      final alerts = deviceCtl.alertCount;
       final resp = await _api.finishSession(
         sessionId,
         SessionFinish(
@@ -221,6 +327,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         color: AppColors.successColor,
       );
     } catch (e) {
+      // Si falla al finalizar, restauramos el timer para que el usuario pueda reintentar
+      // O podríamos ofrecer cerrar forzosamente. Por ahora, restauramos.
       _sess.startSessionTimer();
       if (!mounted) return;
       _showPopup(

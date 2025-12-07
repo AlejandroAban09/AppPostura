@@ -1,3 +1,5 @@
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+
 // lib/screens/trends_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -198,39 +200,62 @@ class _TrendsScreenState extends State<TrendsScreen> {
       ),
       body: SafeArea(
         child: _loading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.accentGold),
+            ? Center(
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                  color: AppColors.accentGold,
+                  size: 50,
+                ),
               )
             : _error != null
             ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: AppColors.errorColor,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error al cargar datos',
-                      style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryText,
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.wifi_off_rounded,
+                        size: 64,
+                        color: AppColors.secondaryText,
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: _loadData,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Reintentar'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.cardDark,
-                        foregroundColor: Colors.white,
+                      const SizedBox(height: 16),
+                      Text(
+                        'No pudimos cargar tus tendencias',
+                        style: GoogleFonts.poppins(
+                          color: AppColors.primaryText,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Verifica tu conexión a internet e inténtalo de nuevo.',
+                        style: GoogleFonts.poppins(
+                          color: AppColors.secondaryText,
+                          fontSize: 14,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _loadData,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reintentar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               )
             : RefreshIndicator(

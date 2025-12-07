@@ -1,3 +1,4 @@
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 // lib/screens/forgot_password_screen.dart
 // CAMBIO: Pantalla de recuperación de contraseña implementada con lógica API primero, luego local
 import 'dart:math';
@@ -7,9 +8,9 @@ import 'package:hive/hive.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '/locator.dart';
-import '/core/api/api_service.dart';
-import '/styles/colors.dart';
+import '../../../locator.dart';
+import '../../../core/api/api_service.dart';
+import '../../../styles/colors.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -508,16 +509,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 ),
                               ),
                               child: _isLoading
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       height: 20,
                                       width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              AppColors.backgroundColor,
-                                            ),
-                                      ),
+                                      child:
+                                          LoadingAnimationWidget.staggeredDotsWave(
+                                            color: AppColors.backgroundColor,
+                                            size: 20,
+                                          ),
                                     )
                                   : const Text('Enviar Código de Verificación'),
                             ),
@@ -726,16 +725,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 ),
                               ),
                               child: _isLoading
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       height: 20,
                                       width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              AppColors.backgroundColor,
-                                            ),
-                                      ),
+                                      child:
+                                          LoadingAnimationWidget.staggeredDotsWave(
+                                            color: AppColors.backgroundColor,
+                                            size: 20,
+                                          ),
                                     )
                                   : const Text('Restablecer Contraseña'),
                             ),

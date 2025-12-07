@@ -7,6 +7,14 @@ import 'api_service.dart';
 import '/features/rewards/models/reward.dart';
 import '/features/rewards/models/redeem_result.dart';
 import '/models/session_models.dart';
+import '/services/storage_service.dart';
+
+class OfflineException implements Exception {
+  final String message;
+  OfflineException(this.message);
+  @override
+  String toString() => message;
+}
 
 class HttpApiService implements ApiService {
   final http.Client _client = http.Client();
@@ -30,6 +38,26 @@ class HttpApiService implements ApiService {
       }
     } catch (_) {}
     throw Exception('HTTP $code: ${r.body}');
+  }
+
+  Future<http.Response> _getWithCache(Uri uri) async {
+    final cacheKey = uri.toString();
+    try {
+      final response = await _client.get(uri).timeout(AppConfig.timeout);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        await StorageService().setString(cacheKey, response.body);
+      }
+      return response;
+    } catch (e) {
+      final cachedBody = StorageService().getString(cacheKey);
+      if (cachedBody != null) {
+        return http.Response(cachedBody, 200);
+      }
+      // Si no hay caché y falla la red, lanzamos una excepción más amigable
+      throw OfflineException(
+        'No hay conexión a internet y no hay datos guardados.',
+      );
+    }
   }
 
   // ========== AUTH ==========
@@ -160,9 +188,7 @@ class HttpApiService implements ApiService {
   // ========== AJUSTES ==========
   @override
   Future<UserSettings> getUserSettings(int userId) async {
-    final r = await _client
-        .get(_u('/users/$userId/settings'))
-        .timeout(AppConfig.timeout);
+    final r = await _getWithCache(_u('/users/$userId/settings'));
     final j = await _jsonOrError(r);
     return UserSettings.fromJson(j);
   }
@@ -225,18 +251,16 @@ class HttpApiService implements ApiService {
   // ========== PUNTOS ==========
   @override
   Future<int> getPoints(int userId) async {
-    final r = await _client
-        .get(_u('/users/$userId/points'))
-        .timeout(AppConfig.timeout);
+    final r = await _getWithCache(_u('/users/$userId/points'));
     final j = await _jsonOrError(r);
     return (j['saldo'] as num?)?.toInt() ?? 0;
   }
 
   @override
   Future<List<LedgerItem>> getLedger(int userId, {int limit = 50}) async {
-    final r = await _client
-        .get(_u('/users/$userId/points/ledger', {'limit': '$limit'}))
-        .timeout(AppConfig.timeout);
+    final r = await _getWithCache(
+      _u('/users/$userId/points/ledger', {'limit': '$limit'}),
+    );
     final j = await _jsonOrError(r);
     final items = (j['items'] as List? ?? []);
     return items
@@ -248,9 +272,7 @@ class HttpApiService implements ApiService {
   @override
   Future<List<Reward>> getRewards({int? partnerId}) async {
     final qp = partnerId != null ? {'partner_id': '$partnerId'} : null;
-    final r = await _client
-        .get(_u('/catalog/rewards', qp))
-        .timeout(AppConfig.timeout);
+    final r = await _getWithCache(_u('/catalog/rewards', qp));
     final j = await _jsonOrError(r);
     final items = (j['items'] as List? ?? []);
     return items
@@ -275,21 +297,16 @@ class HttpApiService implements ApiService {
     return RedeemResult.fromJson(j);
   }
 
-    // ========== HISTORIAL DE SESIONES ==========
+  // ========== HISTORIAL DE SESIONES ==========
   @override
   Future<List<SessionHistory>> getSessionHistory(
     int userId, {
     int limit = 50,
   }) async {
     // Tu API real: GET /sessions?user=ID&limit=N
-    final r = await _client
-        .get(
-          _u('/sessions', {
-            'user': '$userId',
-            'limit': '$limit',
-          }),
-        )
-        .timeout(AppConfig.timeout);
+    final r = await _getWithCache(
+      _u('/sessions', {'user': '$userId', 'limit': '$limit'}),
+    );
 
     final j = await _jsonOrError(r);
 
@@ -304,7 +321,7 @@ class HttpApiService implements ApiService {
       rawList = j['data'] as List;
     } else if (j['sessions'] is List) {
       rawList = j['sessions'] as List;
-    } else if (j is Map && j.isEmpty) {
+    } else if (j.isEmpty) {
       rawList = const [];
     }
 
@@ -313,20 +330,15 @@ class HttpApiService implements ApiService {
         .toList();
   }
 
-
   // Historial de canjes (endpoint real)
   @override
   Future<List<RedeemHistory>> getRedeemHistory(
     int userId, {
     int limit = 50,
   }) async {
-    final r = await _client
-        .get(
-          _u('/users/$userId/redemptions', {
-            'limit': '$limit',
-          }),
-        )
-        .timeout(AppConfig.timeout);
+    final r = await _getWithCache(
+      _u('/users/$userId/redemptions', {'limit': '$limit'}),
+    );
 
     final j = await _jsonOrError(r);
     final items = (j['items'] as List?) ?? [];

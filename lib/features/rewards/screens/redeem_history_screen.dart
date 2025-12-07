@@ -1,3 +1,5 @@
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+
 // lib/screens/redeem_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -38,10 +40,7 @@ class _RedeemHistoryScreenState extends State<RedeemHistoryScreen> {
       }
 
       // 👉 Usar el nuevo endpoint con límite
-      final list = await _api.getRedeemHistory(
-        _sess.userId!,
-        limit: 50,
-      );
+      final list = await _api.getRedeemHistory(_sess.userId!, limit: 50);
 
       if (mounted) {
         setState(() {
@@ -90,20 +89,70 @@ class _RedeemHistoryScreenState extends State<RedeemHistoryScreen> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: LoadingAnimationWidget.staggeredDotsWave(
+          color: AppColors.accentGold,
+          size: 50,
+        ),
+      );
     }
     if (_error != null) {
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Center(
-            child: Text(
-              'Error: $_error',
-              style: GoogleFonts.poppins(color: AppColors.errorColor),
-              textAlign: TextAlign.center,
-            ),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.wifi_off_rounded,
+                size: 64,
+                color: AppColors.secondaryText,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No pudimos cargar tus canjes',
+                style: GoogleFonts.poppins(
+                  color: AppColors.primaryText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Verifica tu conexión a internet e inténtalo de nuevo.',
+                style: GoogleFonts.poppins(
+                  color: AppColors.secondaryText,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _loading = true;
+                    _error = null;
+                  });
+                  _loadHistory();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       );
     }
     if (_history == null || _history!.isEmpty) {

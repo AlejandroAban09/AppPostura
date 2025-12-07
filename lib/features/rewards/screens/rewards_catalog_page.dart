@@ -1,3 +1,5 @@
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+
 // lib/features/rewards/rewards_catalog_page.dart
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
@@ -175,6 +177,7 @@ class _RewardsCatalogPageState extends State<RewardsCatalogPage> {
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkGray,
+                  // ...
                 ),
               ),
               const SizedBox(height: 12),
@@ -400,11 +403,12 @@ class _RewardsCatalogPageState extends State<RewardsCatalogPage> {
                       : <Reward>[];
 
                   if (loading) {
-                    return const Center(
+                    return Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: CircularProgressIndicator(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: LoadingAnimationWidget.staggeredDotsWave(
                           color: AppColors.accentGold,
+                          size: 50,
                         ),
                       ),
                     );

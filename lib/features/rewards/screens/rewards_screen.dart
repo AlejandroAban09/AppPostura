@@ -1,3 +1,6 @@
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:focusme_app/styles/colors.dart';
+
 // lib/screens/rewards_screen.dart
 import 'package:flutter/material.dart';
 import '/locator.dart';
@@ -6,8 +9,8 @@ import 'package:focusme_app/features/rewards/models/reward.dart';
 import 'package:focusme_app/features/rewards/models/redeem_result.dart';
 
 class RewardsScreen extends StatefulWidget {
-  final int userId;         // pásalo desde tu dashboard
-  final int? sessionId;     // opcional para asociar canje a una sesión
+  final int userId; // pásalo desde tu dashboard
+  final int? sessionId; // opcional para asociar canje a una sesión
   const RewardsScreen({super.key, required this.userId, this.sessionId});
 
   @override
@@ -39,16 +42,37 @@ class _RewardsScreenState extends State<RewardsScreen> {
 
   List<Reward> _fallback() {
     return <Reward>[
-      Reward(id: 1001, name: 'Latte Grande', partner: 'Starbucks', cost: 120, imageUrl: null),
-      Reward(id: 1002, name: 'Suscripción ZenCat (1 día)', partner: 'ZenCat', cost: 150, imageUrl: null),
-      Reward(id: 1003, name: 'Descuento 10%', partner: 'Partner X', cost: 200, imageUrl: null),
+      Reward(
+        id: 1001,
+        name: 'Latte Grande',
+        partner: 'Starbucks',
+        cost: 120,
+        imageUrl: null,
+      ),
+      Reward(
+        id: 1002,
+        name: 'Suscripción ZenCat (1 día)',
+        partner: 'ZenCat',
+        cost: 150,
+        imageUrl: null,
+      ),
+      Reward(
+        id: 1003,
+        name: 'Descuento 10%',
+        partner: 'Partner X',
+        cost: 200,
+        imageUrl: null,
+      ),
     ];
   }
 
   Future<void> _redeem(Reward r) async {
     try {
-      final RedeemResult res =
-          await _api.redeem(r.id, userId: widget.userId, sessionId: widget.sessionId);
+      final RedeemResult res = await _api.redeem(
+        r.id,
+        userId: widget.userId,
+        sessionId: widget.sessionId,
+      );
       if (!mounted) return;
       _showTokenDialog(
         title: 'Canje exitoso',
@@ -95,7 +119,10 @@ class _RewardsScreenState extends State<RewardsScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
         ],
       ),
     );
@@ -115,7 +142,10 @@ class _RewardsScreenState extends State<RewardsScreen> {
           if (_usingFallback)
             const Padding(
               padding: EdgeInsets.only(right: 12),
-              child: Icon(Icons.wifi_off, size: 20), // indicador de catálogo genérico
+              child: Icon(
+                Icons.wifi_off,
+                size: 20,
+              ), // indicador de catálogo genérico
             ),
         ],
       ),
@@ -125,7 +155,12 @@ class _RewardsScreenState extends State<RewardsScreen> {
           future: _future,
           builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                  color: AppColors.accentGold,
+                  size: 50,
+                ),
+              );
             }
             if (snap.hasError) {
               return ListView(
@@ -154,7 +189,9 @@ class _RewardsScreenState extends State<RewardsScreen> {
                   child: ListTile(
                     leading: r.imageUrl == null
                         ? const CircleAvatar(child: Icon(Icons.card_giftcard))
-                        : CircleAvatar(backgroundImage: NetworkImage(r.imageUrl!)),
+                        : CircleAvatar(
+                            backgroundImage: NetworkImage(r.imageUrl!),
+                          ),
                     title: Text(r.name),
                     subtitle: Text('${r.partner} • ${r.cost} pts'),
                     trailing: ElevatedButton(

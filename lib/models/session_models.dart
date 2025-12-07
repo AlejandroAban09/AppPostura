@@ -45,6 +45,13 @@ class SessionStart {
     'device_mac': deviceMac,
     'validation_source': validationSource,
   };
+
+  factory SessionStart.fromJson(Map<String, dynamic> j) => SessionStart(
+    userId: j['id_usuario'],
+    deviceName: j['device_name'],
+    deviceMac: j['device_mac'],
+    validationSource: j['validation_source'] ?? 'BLE',
+  );
 }
 
 /// Finalizar sesión de postura /sessions/{id}/finish
@@ -60,6 +67,37 @@ class SessionFinish {
     'alerts': alerts,
     'ssid': ssid,
   };
+
+  factory SessionFinish.fromJson(Map<String, dynamic> j) => SessionFinish(
+    validMinutes: j['valid_minutes'],
+    alerts: j['alerts'],
+    ssid: j['ssid'],
+  );
+}
+
+/// Sesión pendiente de sincronización (Offline)
+class PendingSession {
+  final SessionStart start;
+  final SessionFinish finish;
+  final DateTime timestamp;
+
+  PendingSession({
+    required this.start,
+    required this.finish,
+    required this.timestamp,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'start': start.toJson(),
+    'finish': finish.toJson(),
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory PendingSession.fromJson(Map<String, dynamic> j) => PendingSession(
+    start: SessionStart.fromJson(j['start']),
+    finish: SessionFinish.fromJson(j['finish']),
+    timestamp: DateTime.parse(j['timestamp']),
+  );
 }
 
 /// Respuesta de finish session
@@ -198,8 +236,6 @@ class SessionHistory {
     );
   }
 }
-
-
 
 /// Historial de canjes
 class RedeemHistory {
