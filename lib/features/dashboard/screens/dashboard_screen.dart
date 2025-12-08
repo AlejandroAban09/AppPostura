@@ -14,6 +14,7 @@ import '../../../core/api/api_service.dart';
 import '../../../models/session_models.dart';
 import '../../../controllers/device_status_controller.dart';
 import '../../../services/storage_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../widgets/qr_scanner_widget.dart';
 import '../../../widgets/custom_dialog.dart';
 import '../../../styles/colors.dart';
@@ -92,6 +93,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _startSession(DeviceStatusController deviceCtl) async {
+    // 🔔 Solicitar permisos (crucial para Web por requerir interacción)
+    try {
+      await NotificationService().requestPermissions();
+    } catch (_) {}
+
     if (_sess.currentSessionId != null) {
       _showPopup(
         'Sesión Activa',
@@ -137,7 +143,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         context: context,
         title: 'Sin conexión',
         message:
-            'No se pudo conectar con el servidor.\n¿Deseas iniciar una sesión de práctica offline? (Los datos no se guardarán en tu historial)',
+            'No se pudo conectar con el servidor.\n¿Deseas iniciar una sesión offline? (Los datos se guardarán en tu historial al recuperar la conexión)',
         color: AppColors.warningColor,
         icon: Icons.wifi_off_rounded,
         actions: [
@@ -489,7 +495,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Acciones Rápidas',
+                        'Acciones rápidas',
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
